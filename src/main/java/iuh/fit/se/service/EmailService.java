@@ -26,13 +26,15 @@ public class EmailService {
 //    String apiKey = dotenv.get("API_KEY");
     @Value(value = "${brevo.api-key}")
     String apiKey;
+    @Value(value = "${brevo.sender-email}")
+    String email;
     public EmailReponse sendEmail(SendEmailRequest sendEmailRequest) {
         {
             String htmlContent = templateSendOTP(sendEmailRequest.getTo().getEmail(), sendEmailRequest.getHtmlContent());
             EmailRequest emailRequest = EmailRequest.builder()
                     .sender(Sender.builder()
                             .name("SavorGO")
-                            .email("thinh183tt@gmail.com")
+                            .email(email)
                             .build())
                     .to(List.of(sendEmailRequest.getTo()))
                     .subject(sendEmailRequest.getSubject())
@@ -52,7 +54,7 @@ public class EmailService {
             EmailRequest emailRequest = EmailRequest.builder()
                     .sender(Sender.builder()
                             .name("SHOPPING")
-                            .email("thinh183tt@gmail.com")
+                            .email(email)
                             .build())
                     .to(List.of(sendEmailRequest.getTo()))
                     .subject(sendEmailRequest.getSubject())
