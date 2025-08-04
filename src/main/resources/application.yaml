@@ -4,9 +4,9 @@ server:
     context-path: /notification
 spring:
   application:
-    name: notification-service
+    name: notify-service
   kafka:
-    bootstrap-servers: localhost:9094
+    bootstrap-servers: ${DBKK_CONNECTION:kafka}:9094
     consumer:
       group-id: notification-group
       auto-offset-reset: earliest
@@ -21,4 +21,4 @@ spring:
 brevo:
   api-key: ${BREVO_API_KEY}
   sender-email: ${BREVO_SENDER_EMAIL}
-  sender-name: ${BREVO_SENDER_NAME}
+  sender-name: Shopping
