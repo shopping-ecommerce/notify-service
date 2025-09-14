@@ -1,6 +1,8 @@
 package iuh.fit.se.controller;
 
 import iuh.fit.event.dto.NotificationEvent;
+import iuh.fit.event.dto.OrderCreatedEvent;
+import iuh.fit.event.dto.OrderStatusChangedEvent;
 import iuh.fit.se.dto.request.Recipient;
 import iuh.fit.se.dto.request.SendEmailRequest;
 import iuh.fit.se.service.EmailService;
@@ -39,5 +41,35 @@ public class NotificationController {
                         .build())
                 .htmlContent(notificationEvent.getBody())
                 .build());
+    }
+
+    // Thêm vào NotificationController
+    @KafkaListener(topics = "create-order",properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.OrderCreatedEvent"
+    })
+    public void handleOrderCreated(OrderCreatedEvent orderEvent) {
+        log.info("Received OrderCreatedEvent: {}", orderEvent);
+            // Gửi email thông báo đơn hàng
+            emailService.sendEmailOrderSuccess(orderEvent);
+            log.info("Order creation email sent successfully for order: {} to email: {}",
+                    orderEvent.getOrderId(), orderEvent.getUserEmail());
+    }
+
+    @KafkaListener(topics = "order-updated", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.OrderStatusChangedEvent"
+    })
+    public void handleOrderUpdate(OrderStatusChangedEvent orderEvent) {
+        log.info("Received OrderStatusChangedEvent: {}", orderEvent);
+        try {
+            // Gửi email thông báo cập nhật trạng thái đơn hàng
+            emailService.sendEmailOrderStatusUpdate(orderEvent);
+            log.info("Order status update email sent successfully for order: {} to email: {}",
+                    orderEvent.getOrderId(), orderEvent.getUserEmail());
+        } catch (Exception e) {
+            log.error("Failed to send order status update email for order: {} to email: {}. Error: {}",
+                    orderEvent.getOrderId(), orderEvent.getUserEmail(), e.getMessage());
+        }
     }
 }
