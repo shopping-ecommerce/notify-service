@@ -72,4 +72,21 @@ public class NotificationController {
                     orderEvent.getOrderId(), orderEvent.getUserEmail(), e.getMessage());
         }
     }
+
+    @KafkaListener(topics = "user-cancel-order", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.OrderStatusChangedEvent"
+    })
+    public void handleUserCancelOrder(OrderStatusChangedEvent orderEvent) {
+        log.info("Received OrderStatusChangedEvent on user-cancel-order: {}", orderEvent);
+        try {
+            // Send email notification to the seller for cancellation
+            emailService.sendEmailOrderCancelStatus(orderEvent);
+            log.info("Order cancellation email sent successfully for order: {} to email: {}",
+                    orderEvent.getOrderId(), orderEvent.getUserEmail());
+        } catch (Exception e) {
+            log.error("Failed to send order cancellation email for order: {} to email: {}. Error: {}",
+                    orderEvent.getOrderId(), orderEvent.getUserEmail(), e.getMessage());
+        }
+    }
 }
