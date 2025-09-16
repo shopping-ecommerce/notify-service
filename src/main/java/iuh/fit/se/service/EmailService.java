@@ -113,6 +113,183 @@ public class EmailService {
         }
     }
 
+    public EmailReponse sendEmailOrderCancelStatus(OrderStatusChangedEvent orderStatusChangedEvent) {
+        String htmlContent = templateSellerOrderCancellation(orderStatusChangedEvent);
+        EmailRequest emailRequest = EmailRequest.builder()
+                .sender(Sender.builder()
+                        .name("SHOPPING")
+                        .email(email)
+                        .build())
+                .to(List.of(Recipient.builder()
+                        .email(orderStatusChangedEvent.getUserEmail())
+                        .build()))
+                .subject("Thông báo hủy đơn hàng #" + orderStatusChangedEvent.getOrderId())
+                .htmlContent(htmlContent)
+                .build();
+        try {
+            return emailClient.sendEmail(apiKey, emailRequest);
+        } catch (FeignException e) {
+            throw new RuntimeException("Failed to send order cancellation email: " + e.contentUTF8());
+        }
+    }
+    private String templateSellerOrderCancellation(OrderStatusChangedEvent order) {
+        String statusText = "Đã hủy";
+        String statusColor = "#ef4444"; // Red for CANCELLED
+        String statusIcon = "❌";
+        String statusMessage = "Đơn hàng của bạn đã bị khách hàng hủy. Vui lòng xem chi tiết bên dưới.";
+
+        // Build cancellation reason section
+        String cancellationReasonHtml = "";
+        if (order.getReason() != null && !order.getReason().trim().isEmpty()) {
+            cancellationReasonHtml =
+                    "      <div style=\"background-color: #fef2f2; border-left: 3px solid #ef4444; padding: 16px 20px; border-radius: 6px; margin: 24px 0;\">" +
+                            "        <h4 style=\"color: #dc2626; font-size: 14px; font-weight: 500; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;\">Lý do hủy đơn</h4>" +
+                            "        <p style=\"color: #991b1b; margin: 0; line-height: 1.5; font-size: 14px;\">" + order.getReason() + "</p>" +
+                            "      </div>";
+        }
+
+        // Build order items table
+        StringBuilder itemsHtml = new StringBuilder();
+        if (order.getItems() != null) {
+            for (OrderItemPayload item : order.getItems()) {
+                itemsHtml.append(String.format(
+                        "<tr>" +
+                                "  <td style=\"padding: 16px; border-bottom: 1px solid #f0f0f0; vertical-align: top;\">" +
+                                "    <div style=\"display: flex; align-items: center;\">" +
+                                "      <div style=\"width: 40px; height: 40px; background-color: #f8f9fa; border-radius: 6px; margin-right: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid #e9ecef;\">" +
+                                "        <span style=\"color: #6c757d; font-size: 16px;\">📦</span>" +
+                                "      </div>" +
+                                "      <div>" +
+                                "        <div style=\"font-weight: 500; color: #212529; font-size: 15px; margin-bottom: 2px;\">%s</div>" +
+                                "        <div style=\"font-size: 13px; color: #6c757d;\">Size: %s</div>" +
+                                "      </div>" +
+                                "    </div>" +
+                                "  </td>" +
+                                "  <td style=\"padding: 16px; border-bottom: 1px solid #f0f0f0; text-align: center; vertical-align: top;\">" +
+                                "    <span style=\"background-color: #f8f9fa; padding: 6px 12px; border-radius: 12px; font-weight: 500; color: #495057; font-size: 14px;\">%d</span>" +
+                                "  </td>" +
+                                "  <td style=\"padding: 16px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top;\">" +
+                                "    <span style=\"font-weight: 600; color: #212529; font-size: 15px;\">%,.0f₫</span>" +
+                                "  </td>" +
+                                "</tr>",
+                        item.getProductName(),
+                        item.getSize() != null ? item.getSize() : "N/A",
+                        item.getQuantity(),
+                        item.getSubTotal()
+                ));
+            }
+        }
+
+        return "<html lang=\"vi\">" +
+                "<head>" +
+                "  <meta charset=\"UTF-8\">" +
+                "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
+                "  <title>Thông báo hủy đơn hàng #" + order.getOrderId() + "</title>" +
+                "  <style>" +
+                "    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');" +
+                "    * { box-sizing: border-box; }" +
+                "    body { margin: 0; padding: 0; }" +
+                "    @media only screen and (max-width: 600px) {" +
+                "      .container { width: 100% !important; margin: 10px !important; }" +
+                "      .content { padding: 20px !important; }" +
+                "      .header { padding: 30px 20px !important; }" +
+                "    }" +
+                "  </style>" +
+                "</head>" +
+                "<body style=\"font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; line-height: 1.6;\">" +
+                "  <div class=\"container\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);\">" +
+                "    <!-- Header -->" +
+                "    <div class=\"header\" style=\"background-color: #ffffff; padding: 40px 32px 30px; border-bottom: 1px solid #f0f0f0;\">" +
+                "      <div style=\"text-align: center;\">" +
+                "        <img src=\"https://res.cloudinary.com/dzidt15cl/image/upload/v1757179436/shopping_1_o7hhyi.png\" alt=\"SHOPPING\" style=\"width: 60px; height: auto; margin-bottom: 20px;\"/>" +
+                "        <h1 style=\"margin: 0 0 8px; font-size: 24px; font-weight: 600; color: #212529; letter-spacing: -0.25px;\">Thông báo hủy đơn hàng</h1>" +
+                "        <p style=\"margin: 0; font-size: 15px; color: #6c757d;\">Đơn hàng #" + order.getOrderId() + "</p>" +
+                "      </div>" +
+                "    </div>" +
+                "    <!-- Content -->" +
+                "    <div class=\"content\" style=\"padding: 32px;\">" +
+                "      <!-- Greeting -->" +
+                "      <div style=\"margin-bottom: 32px;\">" +
+                "        <h2 style=\"color: #212529; margin: 0 0 8px; font-size: 18px; font-weight: 500;\">Kính gửi Người bán,</h2>" +
+                "        <p style=\"color: #6c757d; font-size: 15px; margin: 0; line-height: 1.5;\">" + statusMessage + "</p>" +
+                "      </div>" +
+                "      <!-- Order Status -->" +
+                "      <div style=\"background-color: " + statusColor + "; padding: 16px 20px; border-radius: 6px; margin: 24px 0;\">" +
+                "        <div style=\"display: flex; align-items: center;\">" +
+                "          <span style=\"margin-right: 8px; font-size: 16px;\">" + statusIcon + "</span>" +
+                "          <span style=\"color: #ffffff; font-weight: 500; font-size: 14px;\">" + statusText + "</span>" +
+                "        </div>" +
+                "      </div>" +
+                cancellationReasonHtml +
+                "      <!-- Order Items -->" +
+                "      <div style=\"margin: 32px 0;\">" +
+                "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 16px;\">Chi tiết đơn hàng</h3>" +
+                "        <div style=\"border: 1px solid #e9ecef; border-radius: 6px; overflow: hidden;\">" +
+                "          <table style=\"width: 100%; border-collapse: collapse; background-color: #ffffff;\">" +
+                "            <thead>" +
+                "              <tr style=\"background-color: #f8f9fa;\">" +
+                "                <th style=\"padding: 12px 16px; text-align: left; font-weight: 500; color: #495057; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;\">Sản phẩm</th>" +
+                "                <th style=\"padding: 12px 16px; text-align: center; font-weight: 500; color: #495057; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;\">Số lượng</th>" +
+                "                <th style=\"padding: 12px 16px; text-align: right; font-weight: 500; color: #495057; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;\">Giá</th>" +
+                "              </tr>" +
+                "            </thead>" +
+                "            <tbody>" +
+                itemsHtml.toString() +
+                "            </tbody>" +
+                "          </table>" +
+                "        </div>" +
+                "      </div>" +
+                "      <!-- Order Summary -->" +
+                "      <div style=\"background-color: #f8f9fa; padding: 24px; border-radius: 6px; margin: 32px 0;\">" +
+                "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 16px;\">Tóm tắt đơn hàng</h3>" +
+                "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Phí vận chuyển:</span>" +
+                "          <span style=\"color: #22c55e; font-weight: 500; font-size: 14px;\">Miễn phí</span>" +
+                "        </div>" +
+                "        <hr style=\"border: none; border-top: 1px solid #dee2e6; margin: 16px 0;\">" +
+                "        <div style=\"display: flex; justify-content: space-between; align-items: center;\">" +
+                "          <span style=\"font-size: 16px; font-weight: 500; color: #212529;\">Tổng cộng:</span>" +
+                "          <span style=\"font-size: 20px; font-weight: 600; color: #212529;\">" + String.format("%,.0f₫", order.getSubtotal()) + "</span>" +
+                "        </div>" +
+                "      </div>" +
+                "      <!-- Shipping Address -->" +
+                "      <div style=\"border-left: 3px solid #dee2e6; padding: 16px 20px; background-color: #f8f9fa; margin: 24px 0;\">" +
+                "        <h4 style=\"color: #212529; font-size: 14px; font-weight: 500; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;\">Địa chỉ giao hàng</h4>" +
+                "        <p style=\"color: #495057; margin: 0; font-size: 14px; line-height: 1.5;\">" + (order.getShippingAddress() != null ? order.getShippingAddress() : "Không có thông tin") + "</p>" +
+                "      </div>" +
+                "      <!-- Support -->" +
+                "      <div style=\"text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 6px; margin: 24px 0;\">" +
+                "        <h4 style=\"margin: 0 0 8px; font-size: 14px; font-weight: 500; color: #212529;\">Cần hỗ trợ?</h4>" +
+                "        <p style=\"margin: 0 0 12px; color: #6c757d; font-size: 13px;\">Liên hệ với chúng tôi qua email</p>" +
+                "        <a href=\"mailto:thinh183tt@gmail.com\" style=\"color: #212529; text-decoration: none; font-weight: 500; font-size: 14px;\">thinh183tt@gmail.com</a>" +
+                "      </div>" +
+                "    </div>" +
+                "    <!-- Footer -->" +
+                "    <div style=\"background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e9ecef;\">" +
+                "      <div style=\"margin-bottom: 16px;\">" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/733/733547.png\" width=\"20\" alt=\"Facebook\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/2111/2111463.png\" width=\"20\" alt=\"Instagram\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/1384/1384060.png\" width=\"20\" alt=\"YouTube\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "      </div>" +
+                "      <div style=\"font-size: 12px; color: #6c757d; margin-bottom: 8px;\">" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Chính sách</a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Hỗ trợ</a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Điều khoản</a>" +
+                "      </div>" +
+                "      <p style=\"margin: 0; font-size: 11px; color: #adb5bd;\">" +
+                "        © 2025 SHOPPING. Tất cả quyền được bảo lưu." +
+                "      </p>" +
+                "    </div>" +
+                "  </div>" +
+                "</body>" +
+                "</html>";
+    }
     private String templateOrderStatusUpdate(OrderStatusChangedEvent order) {
         String statusText = getStatusText(order.getStatus());
         String statusColor = getStatusColor(order.getStatus());
