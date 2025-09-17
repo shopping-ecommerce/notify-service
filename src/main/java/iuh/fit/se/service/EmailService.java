@@ -5,6 +5,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import iuh.fit.event.dto.OrderCreatedEvent;
 import iuh.fit.event.dto.OrderItemPayload;
 import iuh.fit.event.dto.OrderStatusChangedEvent;
+import iuh.fit.event.dto.SellerVerificationEvent;
 import iuh.fit.se.dto.request.Recipient;
 import iuh.fit.se.dto.response.EmailReponse;
 import iuh.fit.se.dto.request.EmailRequest;
@@ -132,6 +133,130 @@ public class EmailService {
             throw new RuntimeException("Failed to send order cancellation email: " + e.contentUTF8());
         }
     }
+
+    public EmailReponse sendEmailSellerVerification(SellerVerificationEvent event) {
+        String htmlContent = templateSellerVerification(event);
+        EmailRequest emailRequest = EmailRequest.builder()
+                .sender(Sender.builder()
+                        .name("SHOPPING")
+                        .email(email)
+                        .build())
+                .to(List.of(Recipient.builder()
+                        .email(event.getSellerEmail())
+                        .build()))
+                .subject("Kết quả xét duyệt hồ sơ bán hàng #" + event.getSellerId())
+                .htmlContent(htmlContent)
+                .build();
+        try {
+            return emailClient.sendEmail(apiKey, emailRequest);
+        } catch (FeignException e) {
+            throw new RuntimeException("Failed to send seller verification email: " + e.contentUTF8());
+        }
+    }
+
+    private String templateSellerVerification(SellerVerificationEvent event) {
+        String statusText = event.getStatus().equalsIgnoreCase("APPROVED") ? "Đã được duyệt" : "Bị từ chối";
+        String statusColor = event.getStatus().equalsIgnoreCase("APPROVED") ? "#22c55e" : "#ef4444"; // Green or Red
+        String statusIcon = event.getStatus().equalsIgnoreCase("APPROVED") ? "✅" : "❌";
+        String statusMessage = event.getStatus().equalsIgnoreCase("APPROVED")
+                ? "Chúc mừng! Hồ sơ bán hàng của bạn đã được duyệt. Bạn có thể bắt đầu bán hàng ngay bây giờ."
+                : "Rất tiếc, hồ sơ bán hàng của bạn đã bị từ chối. Vui lòng xem lý do bên dưới.";
+
+        // Build rejection reason section if applicable
+        String rejectionReasonHtml = "";
+        if ("REJECTED".equalsIgnoreCase(event.getStatus()) && event.getReason() != null && !event.getReason().trim().isEmpty()) {
+            rejectionReasonHtml =
+                    "      <div style=\"background-color: #fef2f2; border-left: 3px solid #ef4444; padding: 16px 20px; border-radius: 6px; margin: 24px 0;\">" +
+                            "        <h4 style=\"color: #dc2626; font-size: 14px; font-weight: 500; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;\">Lý do từ chối</h4>" +
+                            "        <p style=\"color: #991b1b; margin: 0; line-height: 1.5; font-size: 14px;\">" + event.getReason() + "</p>" +
+                            "      </div>";
+        }
+
+        return "<html lang=\"vi\">" +
+                "<head>" +
+                "  <meta charset=\"UTF-8\">" +
+                "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
+                "  <title>Kết quả xét duyệt hồ sơ bán hàng #" + event.getSellerId() + "</title>" +
+                "  <style>" +
+                "    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');" +
+                "    * { box-sizing: border-box; }" +
+                "    body { margin: 0; padding: 0; }" +
+                "    @media only screen and (max-width: 600px) {" +
+                "      .container { width: 100% !important; margin: 10px !important; }" +
+                "      .content { padding: 20px !important; }" +
+                "      .header { padding: 30px 20px !important; }" +
+                "    }" +
+                "  </style>" +
+                "</head>" +
+                "<body style=\"font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; line-height: 1.6;\">" +
+                "  <div class=\"container\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);\">" +
+                "    <!-- Header -->" +
+                "    <div class=\"header\" style=\"background-color: #ffffff; padding: 40px 32px 30px; border-bottom: 1px solid #f0f0f0;\">" +
+                "      <div style=\"text-align: center;\">" +
+                "        <img src=\"https://res.cloudinary.com/dzidt15cl/image/upload/v1757179436/shopping_1_o7hhyi.png\" alt=\"SHOPPING\" style=\"width: 60px; height: auto; margin-bottom: 20px;\"/>" +
+                "        <h1 style=\"margin: 0 0 8px; font-size: 24px; font-weight: 600; color: #212529; letter-spacing: -0.25px;\">Kết quả xét duyệt hồ sơ</h1>" +
+                "        <p style=\"margin: 0; font-size: 15px; color: #6c757d;\">Hồ sơ #" + event.getSellerId() + "</p>" +
+                "      </div>" +
+                "    </div>" +
+                "    <!-- Content -->" +
+                "    <div class=\"content\" style=\"padding: 32px;\">" +
+                "      <!-- Greeting -->" +
+                "      <div style=\"margin-bottom: 32px;\">" +
+                "        <h2 style=\"color: #212529; margin: 0 0 8px; font-size: 18px; font-weight: 500;\">Kính gửi " + event.getSellerEmail() + ",</h2>" +
+                "        <p style=\"color: #6c757d; font-size: 15px; margin: 0; line-height: 1.5;\">" + statusMessage + "</p>" +
+                "      </div>" +
+                "      <!-- Status -->" +
+                "      <div style=\"background-color: " + statusColor + "; padding: 16px 20px; border-radius: 6px; margin: 24px 0;\">" +
+                "        <div style=\"display: flex; align-items: center;\">" +
+                "          <span style=\"margin-right: 8px; font-size: 16px;\">" + statusIcon + "</span>" +
+                "          <span style=\"color: #ffffff; font-weight: 500; font-size: 14px;\">" + statusText + "</span>" +
+                "        </div>" +
+                "      </div>" +
+                rejectionReasonHtml +
+                "      <!-- Action Button -->" +
+                (event.getStatus().equalsIgnoreCase("APPROVED") ?
+                        "      <div style=\"text-align: center; margin: 40px 0 32px;\">" +
+                                "        <a href=\"http://localhost:3000/seller/dashboard\" " +
+                                "           style=\"display: inline-block; background-color: #212529; color: #ffffff; " +
+                                "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
+                                "           font-size: 14px; transition: background-color 0.2s ease;\">" +
+                                "          Truy cập bảng điều khiển bán hàng" +
+                                "        </a>" +
+                                "      </div>" : "") +
+                "      <!-- Support -->" +
+                "      <div style=\"text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 6px; margin: 24px 0;\">" +
+                "        <h4 style=\"margin: 0 0 8px; font-size: 14px; font-weight: 500; color: #212529;\">Cần hỗ trợ?</h4>" +
+                "        <p style=\"margin: 0 0 12px; color: #6c757d; font-size: 13px;\">Liên hệ với chúng tôi qua email</p>" +
+                "        <a href=\"mailto:thinh183tt@gmail.com\" style=\"color: #212529; text-decoration: none; font-weight: 500; font-size: 14px;\">thinh183tt@gmail.com</a>" +
+                "      </div>" +
+                "    </div>" +
+                "    <!-- Footer -->" +
+                "    <div style=\"background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e9ecef;\">" +
+                "      <div style=\"margin-bottom: 16px;\">" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/733/733547.png\" width=\"20\" alt=\"Facebook\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/2111/2111463.png\" width=\"20\" alt=\"Instagram\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/1384/1384060.png\" width=\"20\" alt=\"YouTube\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "      </div>" +
+                "      <div style=\"font-size: 12px; color: #6c757d; margin-bottom: 8px;\">" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Chính sách</a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Hỗ trợ</a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Điều khoản</a>" +
+                "      </div>" +
+                "      <p style=\"margin: 0; font-size: 11px; color: #adb5bd;\">" +
+                "        © 2025 SHOPPING. Tất cả quyền được bảo lưu." +
+                "      </p>" +
+                "    </div>" +
+                "  </div>" +
+                "</body>" +
+                "</html>";
+    }
+
     private String templateSellerOrderCancellation(OrderStatusChangedEvent order) {
         String statusText = "Đã hủy";
         String statusColor = "#ef4444"; // Red for CANCELLED

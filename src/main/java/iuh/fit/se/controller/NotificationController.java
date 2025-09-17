@@ -3,6 +3,7 @@ package iuh.fit.se.controller;
 import iuh.fit.event.dto.NotificationEvent;
 import iuh.fit.event.dto.OrderCreatedEvent;
 import iuh.fit.event.dto.OrderStatusChangedEvent;
+import iuh.fit.event.dto.SellerVerificationEvent;
 import iuh.fit.se.dto.request.Recipient;
 import iuh.fit.se.dto.request.SendEmailRequest;
 import iuh.fit.se.service.EmailService;
@@ -87,6 +88,23 @@ public class NotificationController {
         } catch (Exception e) {
             log.error("Failed to send order cancellation email for order: {} to email: {}. Error: {}",
                     orderEvent.getOrderId(), orderEvent.getUserEmail(), e.getMessage());
+        }
+    }
+
+    @KafkaListener(topics = "seller-verification", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.SellerVerificationEvent"
+    })
+    public void handleSellerVerification(SellerVerificationEvent event) {
+        log.info("Received SellerVerificationEvent: {}", event);
+        try {
+            // Send email notification for seller verification
+            emailService.sendEmailSellerVerification(event);
+            log.info("Seller verification email sent successfully for seller: {} to email: {}",
+                    event.getSellerId(), event.getSellerEmail());
+        } catch (Exception e) {
+            log.error("Failed to send seller verification email for seller: {} to email: {}. Error: {}",
+                    event.getSellerId(), event.getSellerEmail(), e.getMessage());
         }
     }
 }
