@@ -603,18 +603,12 @@ public class EmailService {
                 return "#f59e0b"; // Amber
             case "CONFIRMED":
                 return "#10b981"; // Emerald
-            case "PROCESSING":
-                return "#3b82f6"; // Blue
             case "SHIPPED":
                 return "#8b5cf6"; // Violet
             case "DELIVERED":
                 return "#22c55e"; // Green
             case "CANCELLED":
                 return "#ef4444"; // Red
-            case "RETURNED":
-                return "#f97316"; // Orange
-            case "REFUNDED":
-                return "#6b7280"; // Gray
             default:
                 return "#6b7280"; // Gray
         }
@@ -648,8 +642,6 @@ public class EmailService {
         switch (status.toUpperCase()) {
             case "PENDING":
                 return "Chờ xử lý";
-            case "PROCESSING":
-                return "Đang xử lý";
             case "SHIPPED":
                 return "Đang giao hàng";
             case "DELIVERED":
@@ -667,18 +659,12 @@ public class EmailService {
                 return "⏳";
             case "CONFIRMED":
                 return "✅";
-            case "PROCESSING":
-                return "📦";
             case "SHIPPED":
                 return "🚚";
             case "DELIVERED":
                 return "🎉";
             case "CANCELLED":
                 return "❌";
-            case "RETURNED":
-                return "↩️";
-            case "REFUNDED":
-                return "💰";
             default:
                 return "📋";
         }
