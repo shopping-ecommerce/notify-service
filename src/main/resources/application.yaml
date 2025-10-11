@@ -16,7 +16,7 @@ spring:
         spring.json.trusted.packages: "*"
   data:
     mongodb:
-      uri: mongodb://localhost:27017/notification-service?authSource=admin
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:root@mongodb:27017/notify_db?authSource=admin}
 
 brevo:
   api-key: ${BREVO_API_KEY}

@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final String[] PULIC_ENDPOINTS = {
+            "/**"
     };
 
     private CustomJwtDecoder customJwtDecoder;

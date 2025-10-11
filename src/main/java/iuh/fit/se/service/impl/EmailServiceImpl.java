@@ -1,7 +1,6 @@
-package iuh.fit.se.service;
+package iuh.fit.se.service.impl;
 
 import feign.FeignException;
-import io.github.cdimascio.dotenv.Dotenv;
 import iuh.fit.event.dto.OrderCreatedEvent;
 import iuh.fit.event.dto.OrderItemPayload;
 import iuh.fit.event.dto.OrderStatusChangedEvent;
@@ -25,7 +24,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class EmailService {
+public class EmailServiceImpl {
     final EmailClient emailClient;
 //    Dotenv dotenv = Dotenv.load();
 //    String apiKey = dotenv.get("API_KEY");
