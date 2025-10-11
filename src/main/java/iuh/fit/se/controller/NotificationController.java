@@ -1,110 +1,114 @@
 package iuh.fit.se.controller;
 
-import iuh.fit.event.dto.NotificationEvent;
-import iuh.fit.event.dto.OrderCreatedEvent;
-import iuh.fit.event.dto.OrderStatusChangedEvent;
-import iuh.fit.event.dto.SellerVerificationEvent;
-import iuh.fit.se.dto.request.Recipient;
-import iuh.fit.se.dto.request.SendEmailRequest;
-import iuh.fit.se.service.EmailService;
+import iuh.fit.se.dto.request.CreateNotificationRequest;
+import iuh.fit.se.dto.response.ApiResponse;
+import iuh.fit.se.entity.Notification;
+import iuh.fit.se.service.NotificationService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.stereotype.Component;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
+@RestController
 @Slf4j
-@Component
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
 public class NotificationController {
-    EmailService emailService;
-    @KafkaListener(topics = "notification-delivery")
-    public void listen(NotificationEvent notificationEvent) {
-        log.info("Received notification event: {}", notificationEvent);
-        emailService.sendEmail(SendEmailRequest.builder()
-                        .subject(notificationEvent.getSubject())
-                        .to(Recipient.builder()
-                                .email(notificationEvent.getRecipient())
-                                .build())
-                        .htmlContent(notificationEvent.getBody())
-                .build());
+    NotificationService notificationService;
+
+    // Endpoint: POST /api/v1/notifications
+    // Mục đích: Tạo một thông báo mới
+    @PostMapping("/create")
+    public ApiResponse<Notification> createNotification(@RequestBody CreateNotificationRequest request) {
+        Notification notification = notificationService.createNotification(
+                request.getUserId(),
+                request.getType(),
+                request.getContent()
+        );
+        return ApiResponse.<Notification>builder()
+                .code(200)
+                .message("Notification created successfully.")
+                .result(notification)
+                .build();
     }
 
-    @KafkaListener(topics = "notification-delivery-success")
-    public void success(NotificationEvent notificationEvent) {
-        log.info("Received notification event: {}", notificationEvent);
-        emailService.sendEmailSuccess(SendEmailRequest.builder()
-                .subject(notificationEvent.getSubject())
-                .to(Recipient.builder()
-                        .email(notificationEvent.getRecipient())
-                        .build())
-                .htmlContent(notificationEvent.getBody())
-                .build());
+    // Endpoint: GET /api/v1/notifications/user/{userId}
+    @GetMapping("/user/{userId}")
+    public ApiResponse<Page<Notification>> getNotifications(
+            @PathVariable String userId,
+            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+        Page<Notification> notifications = notificationService.getNotificationsByUserId(userId, pageable);
+
+        return ApiResponse.<Page<Notification>>builder()
+                .message("Notifications retrieved successfully.")
+                .result(notifications)
+                .build();
+
     }
 
-    // Thêm vào NotificationController
-    @KafkaListener(topics = "create-order",properties = {
-            "spring.json.use.type.headers=false",
-            "spring.json.value.default.type=iuh.fit.event.dto.OrderCreatedEvent"
-    })
-    public void handleOrderCreated(OrderCreatedEvent orderEvent) {
-        log.info("Received OrderCreatedEvent: {}", orderEvent);
-            // Gửi email thông báo đơn hàng
-            emailService.sendEmailOrderSuccess(orderEvent);
-            log.info("Order creation email sent successfully for order: {} to email: {}",
-                    orderEvent.getOrderId(), orderEvent.getUserEmail());
+    // Endpoint: GET /api/v1/notifications/user/{userId}/unread-count
+    @GetMapping("/user/{userId}/unread-count")
+    public ApiResponse<Map<String, Long>> getUnreadCount(@PathVariable String userId) {
+        long count = notificationService.getUnreadNotificationCount(userId);
+
+        return ApiResponse.<Map<String, Long>>builder()
+                .code(200)
+                .message("Unread count retrieved successfully.")
+                .result(Map.of("unreadCount", count))
+                .build();
+
     }
 
-    @KafkaListener(topics = "order-updated", properties = {
-            "spring.json.use.type.headers=false",
-            "spring.json.value.default.type=iuh.fit.event.dto.OrderStatusChangedEvent"
-    })
-    public void handleOrderUpdate(OrderStatusChangedEvent orderEvent) {
-        log.info("Received OrderStatusChangedEvent: {}", orderEvent);
-        try {
-            // Gửi email thông báo cập nhật trạng thái đơn hàng
-            emailService.sendEmailOrderStatusUpdate(orderEvent);
-            log.info("Order status update email sent successfully for order: {} to email: {}",
-                    orderEvent.getOrderId(), orderEvent.getUserEmail());
-        } catch (Exception e) {
-            log.error("Failed to send order status update email for order: {} to email: {}. Error: {}",
-                    orderEvent.getOrderId(), orderEvent.getUserEmail(), e.getMessage());
-        }
+    // Endpoint: PATCH /api/v1/notifications/{id}/read
+    @PatchMapping("/{id}/read")
+    public ApiResponse<Notification> markAsRead(@PathVariable String id) {
+        return notificationService.markAsRead(id)
+                .map(notification -> {
+                    return ApiResponse.<Notification>builder()
+                            .message("Notification marked as read successfully.")
+                            .result(notification)
+                            .build();
+                })
+                .orElseGet(() -> {
+                    return ApiResponse.<Notification>builder()
+                            .code(404) // Bạn có thể định nghĩa các mã lỗi riêng
+                            .message("Notification with id " + id + " not found.")
+                            .build();
+                });
     }
 
-    @KafkaListener(topics = "user-cancel-order", properties = {
-            "spring.json.use.type.headers=false",
-            "spring.json.value.default.type=iuh.fit.event.dto.OrderStatusChangedEvent"
-    })
-    public void handleUserCancelOrder(OrderStatusChangedEvent orderEvent) {
-        log.info("Received OrderStatusChangedEvent on user-cancel-order: {}", orderEvent);
-        try {
-            // Send email notification to the seller for cancellation
-            emailService.sendEmailOrderCancelStatus(orderEvent);
-            log.info("Order cancellation email sent successfully for order: {} to email: {}",
-                    orderEvent.getOrderId(), orderEvent.getUserEmail());
-        } catch (Exception e) {
-            log.error("Failed to send order cancellation email for order: {} to email: {}. Error: {}",
-                    orderEvent.getOrderId(), orderEvent.getUserEmail(), e.getMessage());
-        }
+    // Endpoint: POST /api/v1/notifications/user/{userId}/mark-all-as-read
+    @PostMapping("/user/{userId}/mark-all-as-read")
+    public ApiResponse<Map<String, Long>> markAllAsRead(@PathVariable String userId) {
+        long updatedCount = notificationService.markAllAsRead(userId);
+
+        return ApiResponse.<Map<String, Long>>builder()
+                .code(200)
+                .message("All unread notifications for user " + userId + " have been marked as read.")
+                .result(Map.of("updatedCount", updatedCount))
+                .build();
     }
 
-    @KafkaListener(topics = "seller-verification", properties = {
-            "spring.json.use.type.headers=false",
-            "spring.json.value.default.type=iuh.fit.event.dto.SellerVerificationEvent"
-    })
-    public void handleSellerVerification(SellerVerificationEvent event) {
-        log.info("Received SellerVerificationEvent: {}", event);
-        try {
-            // Send email notification for seller verification
-            emailService.sendEmailSellerVerification(event);
-            log.info("Seller verification email sent successfully for seller: {} to email: {}",
-                    event.getSellerId(), event.getSellerEmail());
-        } catch (Exception e) {
-            log.error("Failed to send seller verification email for seller: {} to email: {}. Error: {}",
-                    event.getSellerId(), event.getSellerEmail(), e.getMessage());
+    // Endpoint: DELETE /api/v1/notifications/{id}
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteNotification(@PathVariable String id) {
+        boolean deleted = notificationService.deleteNotification(id);
+        if (deleted) {
+            return ApiResponse.<Void>builder()
+                    .code(200)
+                    .message("Notification with id " + id + " deleted successfully.")
+                    .build();
+        } else {
+            return ApiResponse.<Void>builder()
+                    .code(404)
+                    .message("Notification with id " + id + " not found.")
+                    .build();
         }
     }
 }

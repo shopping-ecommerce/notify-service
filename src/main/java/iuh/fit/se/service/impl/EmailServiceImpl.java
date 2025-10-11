@@ -1,7 +1,6 @@
-package iuh.fit.se.service;
+package iuh.fit.se.service.impl;
 
 import feign.FeignException;
-import io.github.cdimascio.dotenv.Dotenv;
 import iuh.fit.event.dto.OrderCreatedEvent;
 import iuh.fit.event.dto.OrderItemPayload;
 import iuh.fit.event.dto.OrderStatusChangedEvent;
@@ -25,7 +24,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class EmailService {
+public class EmailServiceImpl {
     final EmailClient emailClient;
 //    Dotenv dotenv = Dotenv.load();
 //    String apiKey = dotenv.get("API_KEY");
@@ -603,18 +602,12 @@ public class EmailService {
                 return "#f59e0b"; // Amber
             case "CONFIRMED":
                 return "#10b981"; // Emerald
-            case "PROCESSING":
-                return "#3b82f6"; // Blue
             case "SHIPPED":
                 return "#8b5cf6"; // Violet
             case "DELIVERED":
                 return "#22c55e"; // Green
             case "CANCELLED":
                 return "#ef4444"; // Red
-            case "RETURNED":
-                return "#f97316"; // Orange
-            case "REFUNDED":
-                return "#6b7280"; // Gray
             default:
                 return "#6b7280"; // Gray
         }
@@ -648,8 +641,6 @@ public class EmailService {
         switch (status.toUpperCase()) {
             case "PENDING":
                 return "Chờ xử lý";
-            case "PROCESSING":
-                return "Đang xử lý";
             case "SHIPPED":
                 return "Đang giao hàng";
             case "DELIVERED":
@@ -667,18 +658,12 @@ public class EmailService {
                 return "⏳";
             case "CONFIRMED":
                 return "✅";
-            case "PROCESSING":
-                return "📦";
             case "SHIPPED":
                 return "🚚";
             case "DELIVERED":
                 return "🎉";
             case "CANCELLED":
                 return "❌";
-            case "RETURNED":
-                return "↩️";
-            case "REFUNDED":
-                return "💰";
             default:
                 return "📋";
         }
