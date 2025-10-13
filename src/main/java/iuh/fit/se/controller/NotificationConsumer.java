@@ -1,9 +1,6 @@
 package iuh.fit.se.controller;
 
-import iuh.fit.event.dto.NotificationEvent;
-import iuh.fit.event.dto.OrderCreatedEvent;
-import iuh.fit.event.dto.OrderStatusChangedEvent;
-import iuh.fit.event.dto.SellerVerificationEvent;
+import iuh.fit.event.dto.*;
 import iuh.fit.se.dto.request.Recipient;
 import iuh.fit.se.dto.request.SendEmailRequest;
 import iuh.fit.se.entity.enums.NotificationType;
@@ -146,6 +143,22 @@ public class NotificationConsumer {
         } catch (Exception e) {
             log.error("Failed to send seller verification email for seller: {} to email: {}. Error: {}",
                     event.getSellerId(), event.getSellerEmail(), e.getMessage());
+        }
+    }
+
+    @KafkaListener(topics = "product-invalid-notify", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.ProductInvalidNotify"
+    })
+    public void handleProductInvalid(ProductInvalidNotify productInvalidNotify) {
+        log.info("Received ProductInvalid: {}", productInvalidNotify);
+        try {
+            log.info("Product invalid email sent successfully for product: {} to email: {}",
+                    productInvalidNotify.getProductId(), productInvalidNotify.getEmail());
+            emailService.sendEmailProductInvalid(productInvalidNotify);
+        } catch (Exception e) {
+            log.error("Failed to send product invalid email for product: {} to email: {}. Error: {}",
+                    productInvalidNotify.getProductId(), productInvalidNotify.getEmail(), e.getMessage());
         }
     }
 }
