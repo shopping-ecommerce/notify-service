@@ -14,6 +14,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -407,7 +408,7 @@ public class EmailServiceImpl {
         String statusIcon = "❌";
         String statusMessage = "Đơn hàng của bạn đã bị khách hàng hủy. Vui lòng xem chi tiết bên dưới.";
 
-        // Build cancellation reason section
+        // Lý do hủy
         String cancellationReasonHtml = "";
         if (order.getReason() != null && !order.getReason().trim().isEmpty()) {
             cancellationReasonHtml =
@@ -417,7 +418,7 @@ public class EmailServiceImpl {
                             "      </div>";
         }
 
-        // Build order items table
+        // Bảng sản phẩm
         StringBuilder itemsHtml = new StringBuilder();
         if (order.getItems() != null) {
             for (OrderItemPayload item : order.getItems()) {
@@ -438,16 +439,32 @@ public class EmailServiceImpl {
                                 "    <span style=\"background-color: #f8f9fa; padding: 6px 12px; border-radius: 12px; font-weight: 500; color: #495057; font-size: 14px;\">%d</span>" +
                                 "  </td>" +
                                 "  <td style=\"padding: 16px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top;\">" +
-                                "    <span style=\"font-weight: 600; color: #212529; font-size: 15px;\">%,.0f₫</span>" +
+                                "    <span style=\"font-weight: 600; color: #212529; font-size: 15px;\">%s</span>" +
                                 "  </td>" +
                                 "</tr>",
                         item.getProductName(),
                         item.getSize() != null ? item.getSize() : "N/A",
                         item.getQuantity(),
-                        item.getSubTotal()
+                        formatCurrency(item.getSubTotal())
                 ));
             }
         }
+
+        // --- BẮT CHƯỚC PHẦN GIẢM GIÁ (y như template thứ hai) ---
+        String discountHtml = "";
+        if (order.getDiscountAmount() != null && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            discountHtml =
+                    "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
+                            "          <span style=\"color: #6c757d; font-size: 14px;\">Giảm giá:</span>" +
+                            "          <span style=\"color: #dc2626; font-weight: 500; font-size: 14px;\">-" + formatCurrency(order.getDiscountAmount()) + "</span>" +
+                            "        </div>";
+        }
+        // ---------------------------------------------------------
+
+        // Tính/hiển thị các khoản tiền: dùng dữ liệu từ order
+        String subtotalStr     = formatCurrency(order.getSubtotal());     // tạm tính
+        String shippingFeeStr  = formatCurrency(order.getShippingFee());  // phí vận chuyển
+        String totalAmountStr  = formatCurrency(order.getTotalAmount());  // tổng cộng
 
         return "<html lang=\"vi\">" +
                 "<head>" +
@@ -512,13 +529,18 @@ public class EmailServiceImpl {
                 "      <div style=\"background-color: #f8f9fa; padding: 24px; border-radius: 6px; margin: 32px 0;\">" +
                 "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 16px;\">Tóm tắt đơn hàng</h3>" +
                 "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
-                "          <span style=\"color: #6c757d; font-size: 14px;\">Phí vận chuyển:</span>" +
-                "          <span style=\"color: #22c55e; font-weight: 500; font-size: 14px;\">Miễn phí</span>" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Tạm tính:</span>" +
+                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + subtotalStr + "</span>" +
                 "        </div>" +
+                "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Phí vận chuyển:</span>" +
+                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + shippingFeeStr + "</span>" +
+                "        </div>" +
+                discountHtml +
                 "        <hr style=\"border: none; border-top: 1px solid #dee2e6; margin: 16px 0;\">" +
                 "        <div style=\"display: flex; justify-content: space-between; align-items: center;\">" +
                 "          <span style=\"font-size: 16px; font-weight: 500; color: #212529;\">Tổng cộng:</span>" +
-                "          <span style=\"font-size: 20px; font-weight: 600; color: #212529;\">" + String.format("%,.0f₫", order.getSubtotal()) + "</span>" +
+                "          <span style=\"font-size: 20px; font-weight: 600; color: #212529;\">" + totalAmountStr + "</span>" +
                 "        </div>" +
                 "      </div>" +
                 "      <!-- Shipping Address -->" +
@@ -595,15 +617,25 @@ public class EmailServiceImpl {
                                 "    <span style=\"background-color: #f8f9fa; padding: 6px 12px; border-radius: 12px; font-weight: 500; color: #495057; font-size: 14px;\">%d</span>" +
                                 "  </td>" +
                                 "  <td style=\"padding: 16px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top;\">" +
-                                "    <span style=\"font-weight: 600; color: #212529; font-size: 15px;\">%,.0f₫</span>" +
+                                "    <span style=\"font-weight: 600; color: #212529; font-size: 15px;\">%s</span>" +
                                 "  </td>" +
                                 "</tr>",
                         item.getProductName(),
                         item.getSize() != null ? item.getSize() : "N/A",
                         item.getQuantity(),
-                        item.getSubTotal()
+                        formatCurrency(item.getSubTotal())
                 ));
             }
+        }
+
+        // Tạo HTML cho phần giảm giá
+        String discountHtml = "";
+        if (order.getDiscountAmount() != null && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            discountHtml =
+                    "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
+                            "          <span style=\"color: #6c757d; font-size: 14px;\">Giảm giá:</span>" +
+                            "          <span style=\"color: #dc2626; font-weight: 500; font-size: 14px;\">-" + formatCurrency(order.getDiscountAmount()) + "</span>" +
+                            "        </div>";
         }
 
         return "<html lang=\"vi\">" +
@@ -676,13 +708,18 @@ public class EmailServiceImpl {
                 "      <div style=\"background-color: #f8f9fa; padding: 24px; border-radius: 6px; margin: 32px 0;\">" +
                 "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 16px;\">Tóm tắt đơn hàng</h3>" +
                 "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
-                "          <span style=\"color: #6c757d; font-size: 14px;\">Phí vận chuyển:</span>" +
-                "          <span style=\"color: #22c55e; font-weight: 500; font-size: 14px;\">Miễn phí</span>" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Tạm tính:</span>" +
+                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + formatCurrency(order.getSubtotal()) + "</span>" +
                 "        </div>" +
+                "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Phí vận chuyển:</span>" +
+                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + formatCurrency(order.getShippingFee()) + "</span>" +
+                "        </div>" +
+                discountHtml +
                 "        <hr style=\"border: none; border-top: 1px solid #dee2e6; margin: 16px 0;\">" +
                 "        <div style=\"display: flex; justify-content: space-between; align-items: center;\">" +
                 "          <span style=\"font-size: 16px; font-weight: 500; color: #212529;\">Tổng cộng:</span>" +
-                "          <span style=\"font-size: 20px; font-weight: 600; color: #212529;\">" + String.format("%,.0f₫", order.getSubtotal()) + "</span>" +
+                "          <span style=\"font-size: 20px; font-weight: 600; color: #212529;\">" + formatCurrency(order.getTotalAmount()) + "</span>" +
                 "        </div>" +
                 "      </div>" +
 
@@ -928,11 +965,24 @@ public class EmailServiceImpl {
                             "    <span style=\"background-color: #f8f9fa; padding: 6px 12px; border-radius: 12px; font-weight: 500; color: #495057; font-size: 14px;\">%d</span>" +
                             "  </td>" +
                             "  <td style=\"padding: 16px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top;\">" +
-                            "    <span style=\"font-weight: 600; color: #212529; font-size: 15px;\">%,.0f₫</span>" +
+                            "    <span style=\"font-weight: 600; color: #212529; font-size: 15px;\">%s</span>" +
                             "  </td>" +
                             "</tr>",
-                    item.getProductName(), item.getSize(), item.getQuantity(), item.getSubTotal()
+                    item.getProductName(),
+                    item.getSize() != null ? item.getSize() : "N/A",
+                    item.getQuantity(),
+                    formatCurrency(item.getSubTotal())
             ));
+        }
+
+        // Tạo HTML cho phần giảm giá (chỉ hiển thị nếu có giảm giá)
+        String discountHtml = "";
+        if (order.getDiscountAmount() != null && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            discountHtml =
+                    "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
+                            "          <span style=\"color: #6c757d; font-size: 14px;\">Giảm giá:</span>" +
+                            "          <span style=\"color: #dc2626; font-weight: 500; font-size: 14px;\">-" + formatCurrency(order.getDiscountAmount()) + "</span>" +
+                            "        </div>";
         }
 
         return "<html lang=\"vi\">" +
@@ -953,7 +1003,6 @@ public class EmailServiceImpl {
                 "</head>" +
                 "<body style=\"font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; line-height: 1.6;\">" +
                 "  <div class=\"container\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);\">" +
-
                 "    <!-- Header -->" +
                 "    <div class=\"header\" style=\"background-color: #ffffff; padding: 40px 32px 30px; border-bottom: 1px solid #f0f0f0;\">" +
                 "      <div style=\"text-align: center;\">" +
@@ -962,16 +1011,13 @@ public class EmailServiceImpl {
                 "        <p style=\"margin: 0; font-size: 15px; color: #6c757d;\">Đơn hàng #" + order.getOrderId() + "</p>" +
                 "      </div>" +
                 "    </div>" +
-
                 "    <!-- Content -->" +
                 "    <div class=\"content\" style=\"padding: 32px;\">" +
-
                 "      <!-- Greeting -->" +
                 "      <div style=\"margin-bottom: 32px;\">" +
                 "        <h2 style=\"color: #212529; margin: 0 0 8px; font-size: 18px; font-weight: 500;\">Xin chào " + (order.getRecipientName() != null ? order.getRecipientName() : "Khách hàng") + ",</h2>" +
                 "        <p style=\"color: #6c757d; font-size: 15px; margin: 0; line-height: 1.5;\">Cảm ơn bạn đã đặt hàng tại SHOPPING. Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị.</p>" +
                 "      </div>" +
-
                 "      <!-- Status -->" +
                 "      <div style=\"background-color: #f8fff4; border: 1px solid #d1f2a7; padding: 16px 20px; border-radius: 6px; margin: 24px 0;\">" +
                 "        <div style=\"display: flex; align-items: center;\">" +
@@ -979,7 +1025,6 @@ public class EmailServiceImpl {
                 "          <span style=\"color: #15803d; font-weight: 500; font-size: 14px;\">Đã xác nhận</span>" +
                 "        </div>" +
                 "      </div>" +
-
                 "      <!-- Order Items -->" +
                 "      <div style=\"margin: 32px 0;\">" +
                 "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 16px;\">Chi tiết đơn hàng</h3>" +
@@ -998,27 +1043,29 @@ public class EmailServiceImpl {
                 "          </table>" +
                 "        </div>" +
                 "      </div>" +
-
                 "      <!-- Order Summary -->" +
                 "      <div style=\"background-color: #f8f9fa; padding: 24px; border-radius: 6px; margin: 32px 0;\">" +
                 "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 16px;\">Tóm tắt đơn hàng</h3>" +
                 "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
-                "          <span style=\"color: #6c757d; font-size: 14px;\">Phí vận chuyển:</span>" +
-                "          <span style=\"color: #22c55e; font-weight: 500; font-size: 14px;\">Miễn phí</span>" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Tạm tính:</span>" +
+                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + formatCurrency(order.getSubtotal()) + "</span>" +
                 "        </div>" +
+                "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Phí vận chuyển:</span>" +
+                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + formatCurrency(order.getShippingFee()) + "</span>" +
+                "        </div>" +
+                discountHtml +
                 "        <hr style=\"border: none; border-top: 1px solid #dee2e6; margin: 16px 0;\">" +
                 "        <div style=\"display: flex; justify-content: space-between; align-items: center;\">" +
                 "          <span style=\"font-size: 16px; font-weight: 500; color: #212529;\">Tổng cộng:</span>" +
-                "          <span style=\"font-size: 20px; font-weight: 600; color: #212529;\">" + String.format("%,.0f₫", order.getSubtotal()) + "</span>" +
+                "          <span style=\"font-size: 20px; font-weight: 600; color: #212529;\">" + formatCurrency(order.getTotalAmount()) + "</span>" +
                 "        </div>" +
                 "      </div>" +
-
                 "      <!-- Shipping Address -->" +
                 "      <div style=\"border-left: 3px solid #dee2e6; padding: 16px 20px; background-color: #f8f9fa; margin: 24px 0;\">" +
                 "        <h4 style=\"color: #212529; font-size: 14px; font-weight: 500; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;\">Địa chỉ giao hàng</h4>" +
                 "        <p style=\"color: #495057; margin: 0; font-size: 14px; line-height: 1.5;\">" + order.getShippingAddress() + "</p>" +
                 "      </div>" +
-
                 "      <!-- Action Button -->" +
                 "      <div style=\"text-align: center; margin: 40px 0 32px;\">" +
                 "        <a href=\"http://localhost:3000/orders/" + order.getOrderId() + "\" " +
@@ -1028,7 +1075,6 @@ public class EmailServiceImpl {
                 "          Theo dõi đơn hàng" +
                 "        </a>" +
                 "      </div>" +
-
                 "      <!-- Support -->" +
                 "      <div style=\"text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 6px; margin: 24px 0;\">" +
                 "        <h4 style=\"margin: 0 0 8px; font-size: 14px; font-weight: 500; color: #212529;\">Cần hỗ trợ?</h4>" +
@@ -1036,7 +1082,6 @@ public class EmailServiceImpl {
                 "        <a href=\"mailto:thinh183tt@gmail.com\" style=\"color: #212529; text-decoration: none; font-weight: 500; font-size: 14px;\">thinh183tt@gmail.com</a>" +
                 "      </div>" +
                 "    </div>" +
-
                 "    <!-- Footer -->" +
                 "    <div style=\"background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e9ecef;\">" +
                 "      <div style=\"margin-bottom: 16px;\">" +
@@ -1064,4 +1109,10 @@ public class EmailServiceImpl {
                 "</html>";
     }
 
+
+    // Thêm method helper để format tiền
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) return "0₫";
+        return String.format("%,.0f₫", amount);
+    }
 }
