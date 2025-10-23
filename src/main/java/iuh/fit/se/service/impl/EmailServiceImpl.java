@@ -462,7 +462,7 @@ public class EmailServiceImpl {
         // ---------------------------------------------------------
 
         // Tính/hiển thị các khoản tiền: dùng dữ liệu từ order
-        String subtotalStr     = formatCurrency(order.getSubtotal().add(order.getShippingFee()));     // tạm tính
+        String subtotalStr     = formatCurrency(order.getSubtotal());     // tạm tính
         String shippingFeeStr  = formatCurrency(order.getShippingFee());  // phí vận chuyển
         String totalAmountStr  = formatCurrency(order.getTotalAmount());  // tổng cộng
 
@@ -709,7 +709,7 @@ public class EmailServiceImpl {
                 "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 16px;\">Tóm tắt đơn hàng</h3>" +
                 "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
                 "          <span style=\"color: #6c757d; font-size: 14px;\">Tạm tính:</span>" +
-                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + formatCurrency(order.getSubtotal().add(order.getShippingFee())) + "</span>" +
+                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + formatCurrency(order.getSubtotal()) + "</span>" +
                 "        </div>" +
                 "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
                 "          <span style=\"color: #6c757d; font-size: 14px;\">Phí vận chuyển:</span>" +
@@ -1048,7 +1048,7 @@ public class EmailServiceImpl {
                 "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 16px;\">Tóm tắt đơn hàng</h3>" +
                 "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
                 "          <span style=\"color: #6c757d; font-size: 14px;\">Tạm tính:</span>" +
-                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + formatCurrency(order.getSubtotal().add(order.getShippingFee())) + "</span>" +
+                "          <span style=\"color: #495057; font-weight: 500; font-size: 14px;\">" + formatCurrency(order.getSubtotal()) + "</span>" +
                 "        </div>" +
                 "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
                 "          <span style=\"color: #6c757d; font-size: 14px;\">Phí vận chuyển:</span>" +
