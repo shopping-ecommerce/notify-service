@@ -11,6 +11,7 @@ import iuh.fit.se.repository.httpclient.EmailClient;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.apache.commons.text.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,7 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -401,7 +403,20 @@ public class EmailServiceImpl {
                 "</body>" +
                 "</html>";
     }
-
+    private static String renderOptionsHtml(Map<String, String> opts) {
+        if (opts == null || opts.isEmpty()) {
+            return "<div style=\"font-size: 13px; color: #6c757d;\">Options: N/A</div>";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (var e : opts.entrySet()) {
+            String k = StringEscapeUtils.escapeHtml4(e.getKey());
+            String v = StringEscapeUtils.escapeHtml4(String.valueOf(e.getValue()));
+            sb.append("<div style=\"font-size: 13px; color: #6c757d;\">")
+                    .append(k).append(": ").append(v)
+                    .append("</div>");
+        }
+        return sb.toString();
+    }
     private String templateSellerOrderCancellation(OrderStatusChangedEvent order) {
         String statusText = "Đã hủy";
         String statusColor = "#ef4444"; // Red for CANCELLED
@@ -422,6 +437,7 @@ public class EmailServiceImpl {
         StringBuilder itemsHtml = new StringBuilder();
         if (order.getItems() != null) {
             for (OrderItemPayload item : order.getItems()) {
+        String optionsHtml = renderOptionsHtml(item.getOptions());
                 itemsHtml.append(String.format(
                         "<tr>" +
                                 "  <td style=\"padding: 16px; border-bottom: 1px solid #f0f0f0; vertical-align: top;\">" +
@@ -431,7 +447,7 @@ public class EmailServiceImpl {
                                 "      </div>" +
                                 "      <div>" +
                                 "        <div style=\"font-weight: 500; color: #212529; font-size: 15px; margin-bottom: 2px;\">%s</div>" +
-                                "        <div style=\"font-size: 13px; color: #6c757d;\">Size: %s</div>" +
+                                "        <div style=\"font-size: 13px; color: #6c757d;\">%s</div>" +
                                 "      </div>" +
                                 "    </div>" +
                                 "  </td>" +
@@ -443,7 +459,7 @@ public class EmailServiceImpl {
                                 "  </td>" +
                                 "</tr>",
                         item.getProductName(),
-                        item.getSize() != null ? item.getSize() : "N/A",
+                        optionsHtml,
                         item.getQuantity(),
                         formatCurrency(item.getSubTotal())
                 ));
@@ -600,6 +616,7 @@ public class EmailServiceImpl {
         StringBuilder itemsHtml = new StringBuilder();
         if (order.getItems() != null) {
             for (OrderItemPayload item : order.getItems()) {
+                String optionsHtml = renderOptionsHtml(item.getOptions());
                 itemsHtml.append(String.format(
                         "<tr>" +
                                 "  <td style=\"padding: 16px; border-bottom: 1px solid #f0f0f0; vertical-align: top;\">" +
@@ -609,7 +626,7 @@ public class EmailServiceImpl {
                                 "      </div>" +
                                 "      <div>" +
                                 "        <div style=\"font-weight: 500; color: #212529; font-size: 15px; margin-bottom: 2px;\">%s</div>" +
-                                "        <div style=\"font-size: 13px; color: #6c757d;\">Size: %s</div>" +
+                                "        <div style=\"font-size: 13px; color: #6c757d;\">%s</div>" +
                                 "      </div>" +
                                 "    </div>" +
                                 "  </td>" +
@@ -621,7 +638,7 @@ public class EmailServiceImpl {
                                 "  </td>" +
                                 "</tr>",
                         item.getProductName(),
-                        item.getSize() != null ? item.getSize() : "N/A",
+                        optionsHtml ,
                         item.getQuantity(),
                         formatCurrency(item.getSubTotal())
                 ));
@@ -854,7 +871,7 @@ public class EmailServiceImpl {
 
     private String templateSendOTP(String name, String otp) {
         String verifyUrl = String.format(
-                "http://localhost:8888/savorgo/api/authentication/verifyFromEmail?email=%s",
+                "http://localhost:8888/shopping/api/authentication/verifyFromEmail?email=%s",
                 URLEncoder.encode(name, StandardCharsets.UTF_8)
         );
         return "<html lang=\"vi\">" +
@@ -880,7 +897,7 @@ public class EmailServiceImpl {
                 "    <p style=\"text-align: center;\">Mã có hiệu lực trong <strong>1 phút</strong>.</p>" +
                 "    <p style=\"text-align: center;\">" +
                 "       <a href=\"" + verifyUrl + "\" style=\"background-color: #3498db; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px;\">Xác thực ngay</a>" +
-                "    <p style=\"text-align: center; margin-top: 30px; font-size: 14px;\">Nếu bạn không yêu cầu mã này, vui lòng liên hệ <a href=\"mailto:thinh183tt@gmail.com\">support@savorgo.com</a>.</p>" +
+                "    <p style=\"text-align: center; margin-top: 30px; font-size: 14px;\">Nếu bạn không yêu cầu mã này, vui lòng liên hệ <a href=\"mailto:thinh183tt@gmail.com\">support@shopping.com</a>.</p>" +
 
                 // Footer giống Riot
                 "    <hr style=\"margin: 40px 0;\">" +
@@ -923,7 +940,7 @@ public class EmailServiceImpl {
                 "    <p style=\"text-align: center; margin: 20px 0;\">" +
                 "      <a href=\"http://localhost:3000/\" style=\"background-color: #3498db; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px;\">Đăng nhập ngay</a>" +
                 "    </p>" +
-                "    <p style=\"text-align: center; margin-top: 30px; font-size: 14px;\">Nếu bạn gặp bất kỳ vấn đề nào, vui lòng liên hệ <a href=\"mailto:thinh183tt@gmail.com\">support@savorgo.com</a>.</p>" +
+                "    <p style=\"text-align: center; margin-top: 30px; font-size: 14px;\">Nếu bạn gặp bất kỳ vấn đề nào, vui lòng liên hệ <a href=\"mailto:thinh183tt@gmail.com\">support@shopping.com</a>.</p>" +
                 // Footer giống Riot
                 "    <hr style=\"margin: 40px 0;\">" +
                 "    <div style=\"text-align: center;\">" +
@@ -957,7 +974,7 @@ public class EmailServiceImpl {
                             "      </div>" +
                             "      <div>" +
                             "        <div style=\"font-weight: 500; color: #212529; font-size: 15px; margin-bottom: 2px;\">%s</div>" +
-                            "        <div style=\"font-size: 13px; color: #6c757d;\">Size: %s</div>" +
+                            "        <div style=\"font-size: 13px; color: #6c757d;\">%s</div>" +
                             "      </div>" +
                             "    </div>" +
                             "  </td>" +
@@ -969,7 +986,7 @@ public class EmailServiceImpl {
                             "  </td>" +
                             "</tr>",
                     item.getProductName(),
-                    item.getSize() != null ? item.getSize() : "N/A",
+                    item.getOptions() != null ? item.getOptions() : "N/A",
                     item.getQuantity(),
                     formatCurrency(item.getSubTotal())
             ));
