@@ -13,16 +13,14 @@ Kiến trúc microservices với Notify-Service làm core cho messaging. Các th
 - **Database**: MongoDB (notifications collection, indexed userId/status, TTL 30 days).
 - **Security**: JWT (OAuth2), all endpoints public (/** permitAll).
 - **Deployment**: Docker + Kubernetes (giả định), port 8081 (context-path: /notification).
-
-*(Diagram mẫu - thay bằng Draw.io nếu cần. Dưới là Mermaid code, GitHub sẽ render tự động:)*
-
 ```mermaid
 graph TD
-    A[Client/App] -->|REST API| B["Notify-Service (Port 8082 /notification)"]
-    B -->|Persist Notification| C[MongoDB (notify_db, TTL 30 days)]
-    B -->|Events| D[Kafka (create-order, order-updated, user-cancel-order, seller-verification, product-invalid-notify)]
-    B -->|Send Email| E[Brevo (Feign EmailClient)]
-    F[Events] -->|Consume| B
+    A[Client/App] -->|REST API| B[Notify-Service Port 8081]
+    B -->|Persist Notification| C[MongoDB notify_db TTL 30 days]
+    B -->|Consume Events| D[Kafka notification-group]
+    B -->|Send Email| E[Brevo EmailClient]
+    F[Kafka Topics] -->|Events| B
+    
     style B fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
@@ -115,15 +113,17 @@ tail -f logs/application.log  # Hoặc console
 - **Contributing Guide**: Xem `CONTRIBUTING.md`.
 
 ## 🤝 Đóng Góp
+- Fork repo và tạo PR với branch `feature/[tên-feature]`.
 - Tuân thủ code style: Checkstyle, Lombok annotations.
 - Test coverage >80% trước merge.
-Pull requests welcome! Báo issue nếu bug hoặc feature request.
+  Pull requests welcome! Báo issue nếu bug hoặc feature request.
 
 ## 📄 Giấy Phép
 Dự án này được phân phối dưới giấy phép MIT. Xem file [LICENSE](LICENSE) để biết chi tiết.
 
 ## 👥 Liên Hệ
 - Author: [Hồ Huỳnh Hoài Thịnh] ([@github-hohuynhhoaithinh](https://github.com/hohuynhhoaithinh))
+- Issues: [Tạo issue mới](https://github.com/shopping-ecommerce/notify-service/issues/new)
 - Email: [hohuynhhoaithinh@gmail.com]
 
 ---
