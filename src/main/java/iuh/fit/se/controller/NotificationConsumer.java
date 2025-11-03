@@ -161,4 +161,21 @@ public class NotificationConsumer {
                     productInvalidNotify.getProductId(), productInvalidNotify.getEmail(), e.getMessage());
         }
     }
+
+    @KafkaListener(topics = "policy-notification", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.PolicyEvent"
+    })
+    public void handlePolicyNotification(PolicyEvent policyEvent) {
+        log.info("Received PolicyEvent: {}", policyEvent);
+        try {
+            // Gửi email cho từng người dùng trong danh sách
+            for (String email : policyEvent.getEmails()) {
+                emailService.sendEmailPolicyUpdate(policyEvent, email);
+                log.info("Policy notification email sent successfully to: {}", email);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send policy notification emails. Error: {}", e.getMessage());
+        }
+    }
 }
