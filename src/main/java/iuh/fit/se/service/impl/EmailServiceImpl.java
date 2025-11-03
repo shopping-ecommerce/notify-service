@@ -1132,4 +1132,160 @@ public class EmailServiceImpl {
         if (amount == null) return "0₫";
         return String.format("%,.0f₫", amount);
     }
+    // Thêm method này vào class EmailServiceImpl
+
+    public EmailReponse sendEmailPolicyUpdate(PolicyEvent policyEvent, String recipientEmail) {
+        String htmlContent = templatePolicyUpdate(policyEvent);
+        EmailRequest emailRequest = EmailRequest.builder()
+                .sender(Sender.builder()
+                        .name("SHOPPING")
+                        .email(email)
+                        .build())
+                .to(List.of(Recipient.builder()
+                        .email(recipientEmail)
+                        .build()))
+                .subject("Thông báo cập nhật Chính sách & Điều khoản")
+                .htmlContent(htmlContent)
+                .build();
+        try {
+            return emailClient.sendEmail(apiKey, emailRequest);
+        } catch (FeignException e) {
+            throw new RuntimeException("Failed to send policy update email: " + e.contentUTF8());
+        }
+    }
+
+    private String templatePolicyUpdate(PolicyEvent policy) {
+        String formattedDate = policy.getStartDate() != null
+                ? policy.getStartDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                : "N/A";
+
+        return "<html lang=\"vi\">" +
+                "<head>" +
+                "  <meta charset=\"UTF-8\">" +
+                "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
+                "  <title>Thông báo cập nhật Chính sách</title>" +
+                "  <style>" +
+                "    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');" +
+                "    * { box-sizing: border-box; }" +
+                "    body { margin: 0; padding: 0; }" +
+                "    @media only screen and (max-width: 600px) {" +
+                "      .container { width: 100% !important; margin: 10px !important; }" +
+                "      .content { padding: 20px !important; }" +
+                "      .header { padding: 30px 20px !important; }" +
+                "    }" +
+                "  </style>" +
+                "</head>" +
+                "<body style=\"font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; line-height: 1.6;\">" +
+                "  <div class=\"container\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);\">" +
+
+                "    <!-- Header -->" +
+                "    <div class=\"header\" style=\"background-color: #ffffff; padding: 40px 32px 30px; border-bottom: 1px solid #f0f0f0;\">" +
+                "      <div style=\"text-align: center;\">" +
+                "        <img src=\"https://res.cloudinary.com/dzidt15cl/image/upload/v1757179436/shopping_1_o7hhyi.png\" alt=\"SHOPPING\" style=\"width: 60px; height: auto; margin-bottom: 20px;\"/>" +
+                "        <h1 style=\"margin: 0 0 8px; font-size: 24px; font-weight: 600; color: #212529; letter-spacing: -0.25px;\">Cập nhật Chính sách & Điều khoản</h1>" +
+                "        <p style=\"margin: 0; font-size: 15px; color: #6c757d;\">Thông báo quan trọng</p>" +
+                "      </div>" +
+                "    </div>" +
+
+                "    <!-- Content -->" +
+                "    <div class=\"content\" style=\"padding: 32px;\">" +
+
+                "      <!-- Greeting -->" +
+                "      <div style=\"margin-bottom: 32px;\">" +
+                "        <h2 style=\"color: #212529; margin: 0 0 8px; font-size: 18px; font-weight: 500;\">Kính gửi Quý khách hàng,</h2>" +
+                "        <p style=\"color: #6c757d; font-size: 15px; margin: 0; line-height: 1.5;\">" +
+                "          Chúng tôi xin thông báo về việc cập nhật Chính sách và Điều khoản sử dụng của SHOPPING. " +
+                "          Những thay đổi này sẽ có hiệu lực từ ngày <strong>" + formattedDate + "</strong>." +
+                "        </p>" +
+                "      </div>" +
+
+                "      <!-- Important Notice -->" +
+                "      <div style=\"background-color: #fff7ed; border: 1px solid #fed7aa; padding: 20px; border-radius: 6px; margin: 24px 0;\">" +
+                "        <div style=\"display: flex; align-items: flex-start;\">" +
+                "          <span style=\"color: #ea580c; margin-right: 12px; font-size: 20px;\">⚠️</span>" +
+                "          <div>" +
+                "            <h4 style=\"color: #ea580c; font-size: 14px; font-weight: 500; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;\">Lưu ý quan trọng</h4>" +
+                "            <p style=\"color: #9a3412; margin: 0; line-height: 1.5; font-size: 14px;\">" +
+                "              Việc đồng ý chính sách của chúng tôi sau ngày <strong>" + formattedDate + "</strong> " +
+                "              đồng nghĩa với việc bạn chấp nhận các điều khoản và chính sách mới. Ngược lại chấm dứt hợp tác. Bạn có 7 - 30 ngày để quyết định. Xin chân thành cảm ơn!" +
+                "            </p>" +
+                "          </div>" +
+                "        </div>" +
+                "      </div>" +
+
+                "      <!-- Effective Date -->" +
+                "      <div style=\"border-left: 3px solid #3b82f6; padding: 16px 20px; background-color: #eff6ff; margin: 24px 0;\">" +
+                "        <h4 style=\"color: #1e40af; font-size: 14px; font-weight: 500; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;\">Ngày hiệu lực</h4>" +
+                "        <p style=\"color: #1e3a8a; margin: 0; font-size: 16px; font-weight: 600;\">" + formattedDate + "</p>" +
+                "      </div>" +
+
+                "      <!-- What Changed -->" +
+                "      <div style=\"margin: 32px 0;\">" +
+                "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 16px;\">Nội dung thay đổi chính</h3>" +
+                "        <ul style=\"color: #495057; margin: 0; padding-left: 20px; line-height: 1.8; font-size: 14px;\">" +
+                "          <li style=\"margin-bottom: 8px;\">Điều chỉnh điều khoản</li>" +
+                "        </ul>" +
+                "      </div>" +
+
+                "      <!-- Action Buttons -->" +
+                "      <div style=\"text-align: center; margin: 40px 0 32px;\">" +
+                (policy.getPdfUrl() != null && !policy.getPdfUrl().trim().isEmpty() ?
+                        "        <a href=\"" + policy.getPdfUrl() + "\" " +
+                                "           style=\"display: inline-block; background-color: #dc2626; color: #ffffff; " +
+                                "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
+                                "           font-size: 14px; margin: 0 8px 12px; transition: background-color 0.2s ease;\">" +
+                                "          📄 Tải file PDF" +
+                                "        </a>" : "") +
+                "        <a href=\"http://localhost:3000/policies\" " +
+                "           style=\"display: inline-block; background-color: #212529; color: #ffffff; " +
+                "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
+                "           font-size: 14px; margin: 0 8px 12px; transition: background-color 0.2s ease;\">" +
+                "          Xem chi tiết" +
+                "        </a>" +
+                "      </div>" +
+
+                "      <!-- Additional Info -->" +
+                "      <div style=\"background-color: #f8f9fa; border-radius: 6px; padding: 20px; margin: 24px 0;\">" +
+                "        <h4 style=\"color: #212529; font-size: 14px; font-weight: 500; margin: 0 0 12px;\">💡 Khuyến nghị</h4>" +
+                "        <p style=\"color: #6c757d; margin: 0; line-height: 1.6; font-size: 14px;\">" +
+                "          Chúng tôi khuyến khích bạn dành thời gian đọc kỹ các thay đổi để hiểu rõ quyền lợi và nghĩa vụ của mình. " +
+                "          Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với đội ngũ hỗ trợ của chúng tôi." +
+                "        </p>" +
+                "      </div>" +
+
+                "      <!-- Support -->" +
+                "      <div style=\"text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 6px; margin: 24px 0;\">" +
+                "        <h4 style=\"margin: 0 0 8px; font-size: 14px; font-weight: 500; color: #212529;\">Cần hỗ trợ?</h4>" +
+                "        <p style=\"margin: 0 0 12px; color: #6c757d; font-size: 13px;\">Liên hệ với chúng tôi qua email</p>" +
+                "        <a href=\"mailto:thinh183tt@gmail.com\" style=\"color: #212529; text-decoration: none; font-weight: 500; font-size: 14px;\">thinh183tt@gmail.com</a>" +
+                "      </div>" +
+
+                "    </div>" +
+
+                "    <!-- Footer -->" +
+                "    <div style=\"background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e9ecef;\">" +
+                "      <div style=\"margin-bottom: 16px;\">" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/733/733547.png\" width=\"20\" alt=\"Facebook\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/2111/2111463.png\" width=\"20\" alt=\"Instagram\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/1384/1384060.png\" width=\"20\" alt=\"YouTube\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "      </div>" +
+                "      <div style=\"font-size: 12px; color: #6c757d; margin-bottom: 8px;\">" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Chính sách</a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Hỗ trợ</a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Điều khoản</a>" +
+                "      </div>" +
+                "      <p style=\"margin: 0; font-size: 11px; color: #adb5bd;\">" +
+                "        © 2025 SHOPPING. Tất cả quyền được bảo lưu." +
+                "      </p>" +
+                "    </div>" +
+                "  </div>" +
+                "</body>" +
+                "</html>";
+    }
 }
