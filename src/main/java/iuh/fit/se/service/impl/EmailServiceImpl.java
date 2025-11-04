@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -1287,5 +1289,279 @@ public class EmailServiceImpl {
                 "  </div>" +
                 "</body>" +
                 "</html>";
+    }
+    private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    private String fmtDateTime(java.time.LocalDateTime dt) {
+        return dt != null ? dt.format(DT_FMT) : "N/A";
+    }
+
+    private String safe(String s) {
+        return s == null ? "" : StringEscapeUtils.escapeHtml4(s);
+    }
+
+    // ======= PUBLIC SENDERS =======
+    public EmailReponse sendEmailSellerSuspension(SellerSuspensionEvent event) {
+        String htmlContent = templateSellerSuspension(event);
+        EmailRequest emailRequest = EmailRequest.builder()
+                .sender(Sender.builder().name("SHOPPING").email(email).build())
+                .to(List.of(Recipient.builder().email(event.getSellerEmail()).build()))
+                .subject("Thông báo tạm khóa tài khoản bán hàng")
+                .htmlContent(htmlContent)
+                .build();
+        try {
+            return emailClient.sendEmail(apiKey, emailRequest);
+        } catch (FeignException e) {
+            throw new RuntimeException("Failed to send seller suspension email: " + e.contentUTF8());
+        }
+    }
+
+    public EmailReponse sendEmailSellerWarning(SellerWarningEvent event) {
+        String htmlContent = templateSellerWarning(event);
+        EmailRequest emailRequest = EmailRequest.builder()
+                .sender(Sender.builder().name("SHOPPING").email(email).build())
+                .to(List.of(Recipient.builder().email(event.getSellerEmail()).build()))
+                .subject("Cảnh báo vi phạm chính sách bán hàng")
+                .htmlContent(htmlContent)
+                .build();
+        try {
+            return emailClient.sendEmail(apiKey, emailRequest);
+        } catch (FeignException e) {
+            throw new RuntimeException("Failed to send seller warning email: " + e.contentUTF8());
+        }
+    }
+
+    // ======= TEMPLATES =======
+    private String templateSellerSuspension(SellerSuspensionEvent e) {
+        String daysStr = e.getSuspensionDays() != null ? e.getSuspensionDays() + " ngày" : "N/A";
+        String endAt   = fmtDateTime(e.getSuspensionEndDate());
+
+        return "<html lang=\"vi\">" +
+                "<head>" +
+                "  <meta charset=\"UTF-8\">" +
+                "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
+                "  <title>Tạm khóa tài khoản bán hàng</title>" +
+                "  <style>" +
+                "    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');" +
+                "    * { box-sizing: border-box; } body { margin:0; padding:0; }" +
+                "    @media only screen and (max-width: 600px) { .container { width:100% !important; margin:10px !important; } .content{ padding:20px !important;} .header{ padding:30px 20px !important;} }" +
+                "  </style>" +
+                "</head>" +
+                "<body style=\"font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color:#f8f9fa; margin:0; padding:20px; line-height:1.6;\">" +
+                "  <div class=\"container\" style=\"max-width:600px; margin:0 auto; background-color:#fff; border-radius:8px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.05);\">" +
+
+                "    <div class=\"header\" style=\"background-color:#fff; padding:40px 32px 30px; border-bottom:1px solid #f0f0f0; text-align:center;\">" +
+                "      <img src=\"https://res.cloudinary.com/dzidt15cl/image/upload/v1757179436/shopping_1_o7hhyi.png\" alt=\"SHOPPING\" style=\"width:60px; height:auto; margin-bottom:20px;\"/>" +
+                "      <h1 style=\"margin:0 0 8px; font-size:24px; font-weight:600; color:#212529; letter-spacing:-0.25px;\">Tài khoản bị tạm khóa</h1>" +
+                "      <p style=\"margin:0; font-size:15px; color:#6c757d;\">Seller #" + safe(e.getSellerId()) + "</p>" +
+                "    </div>" +
+
+                "    <div class=\"content\" style=\"padding:32px;\">" +
+                "      <div style=\"margin-bottom:24px;\">" +
+                "        <h2 style=\"color:#212529; margin:0 0 8px; font-size:18px; font-weight:500;\">Kính gửi " + safe(e.getSellerEmail()) + ",</h2>" +
+                "        <p style=\"color:#6c757d; font-size:15px; margin:0;\">Tài khoản bán hàng của bạn đã bị <strong>tạm khóa</strong> do vi phạm chính sách.</p>" +
+                "      </div>" +
+
+                "      <div style=\"background-color:#fef2f2; border-left:3px solid #ef4444; padding:16px 20px; border-radius:6px; margin:24px 0;\">" +
+                "        <div style=\"display:flex; align-items:center; gap:8px; color:#b91c1c; font-weight:600;\">" +
+                "          <span>❌</span><span>Thông tin tạm khóa</span>" +
+                "        </div>" +
+                "        <div style=\"margin-top:12px; color:#991b1b; font-size:14px;\">" +
+                "          <div><strong>Loại vi phạm:</strong> " + safe(e.getViolationType()) + "</div>" +
+                "          <div><strong>Số lần vi phạm:</strong> " + (e.getViolationCount() == null ? "N/A" : e.getViolationCount()) + "</div>" +
+                "          <div><strong>Thời hạn:</strong> " + daysStr + "</div>" +
+                "          <div><strong>Khóa đến:</strong> " + endAt + "</div>" +
+                "          " + (e.getReason() != null && !e.getReason().isBlank()
+                ? "<div style='margin-top:8px;'><strong>Lý do chi tiết:</strong> " + safe(e.getReason()) + "</div>"
+                : "") +
+                "        </div>" +
+                "      </div>" +
+
+                "      <div style=\"background-color:#fff7ed; border:1px solid #fed7aa; padding:20px; border-radius:6px; margin:24px 0;\">" +
+                "        <h4 style=\"color:#ea580c; font-size:14px; font-weight:500; margin:0 0 8px; text-transform:uppercase; letter-spacing:.5px;\">Các bước tiếp theo</h4>" +
+                "        <ul style=\"color:#9a3412; margin:0; padding-left:20px; line-height:1.6; font-size:14px;\">" +
+                "          <li>Đọc lại chính sách và nội quy đăng bán</li>" +
+                "          <li>Chuẩn bị tài liệu/chứng cứ nếu cần khiếu nại</li>" +
+                "          <li>Đợi hết thời gian tạm khóa hoặc gửi yêu cầu khiếu nại</li>" +
+                "        </ul>" +
+                "      </div>" +
+
+                "      <div style=\"text-align:center; margin:32px 0;\">" +
+                "        <a href=\"http://localhost:3000/seller/violations\" style=\"display:inline-block; background-color:#212529; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:500; font-size:14px;\">Xem chi tiết vi phạm</a>" +
+                "      </div>" +
+
+                "      <div style=\"text-align:center; padding:20px; background-color:#f8f9fa; border-radius:6px; margin:24px 0;\">" +
+                "        <h4 style=\"margin:0 0 8px; font-size:14px; font-weight:500; color:#212529;\">Cần hỗ trợ?</h4>" +
+                "        <p style=\"margin:0 0 12px; color:#6c757d; font-size:13px;\">Liên hệ email hỗ trợ</p>" +
+                "        <a href=\"mailto:thinh183tt@gmail.com\" style=\"color:#212529; text-decoration:none; font-weight:500; font-size:14px;\">thinh183tt@gmail.com</a>" +
+                "      </div>" +
+                "    </div>" +
+
+                "    <div style=\"background-color:#f8f9fa; padding:24px 32px; text-align:center; border-top:1px solid #e9ecef;\">" +
+                "      <div style=\"margin-bottom:16px;\">" +
+                "        <a href=\"#\" style=\"margin:0 8px; opacity:.6;\"><img src=\"https://cdn-icons-png.flaticon.com/512/733/733547.png\" width=\"20\"/></a>" +
+                "        <a href=\"#\" style=\"margin:0 8px; opacity:.6;\"><img src=\"https://cdn-icons-png.flaticon.com/512/2111/2111463.png\" width=\"20\"/></a>" +
+                "        <a href=\"#\" style=\"margin:0 8px; opacity:.6;\"><img src=\"https://cdn-icons-png.flaticon.com/512/1384/1384060.png\" width=\"20\"/></a>" +
+                "      </div>" +
+                "      <div style=\"font-size:12px; color:#6c757d; margin-bottom:8px;\">" +
+                "        <a href=\"#\" style=\"margin:0 8px; color:#6c757d; text-decoration:none;\">Chính sách</a>" +
+                "        <a href=\"#\" style=\"margin:0 8px; color:#6c757d; text-decoration:none;\">Hỗ trợ</a>" +
+                "        <a href=\"#\" style=\"margin:0 8px; color:#6c757d; text-decoration:none;\">Điều khoản</a>" +
+                "      </div>" +
+                "      <p style=\"margin:0; font-size:11px; color:#adb5bd;\">© 2025 SHOPPING. Tất cả quyền được bảo lưu.</p>" +
+                "    </div>" +
+                "  </div>" +
+                "</body></html>";
+    }
+
+    private String templateSellerWarning(SellerWarningEvent e) {
+        return "<html lang=\"vi\">" +
+                "<head>" +
+                "  <meta charset=\"UTF-8\">" +
+                "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
+                "  <title>Cảnh báo vi phạm</title>" +
+                "  <style>" +
+                "    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');" +
+                "    * { box-sizing: border-box; } body{ margin:0; padding:0; }" +
+                "    @media only screen and (max-width:600px){ .container{ width:100% !important; margin:10px !important;} .content{ padding:20px !important;} .header{ padding:30px 20px !important;} }" +
+                "  </style>" +
+                "</head>" +
+                "<body style=\"font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color:#f8f9fa; margin:0; padding:20px; line-height:1.6;\">" +
+                "  <div class=\"container\" style=\"max-width:600px; margin:0 auto; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.05);\">" +
+
+                "    <div class=\"header\" style=\"background:#fff; padding:40px 32px 30px; border-bottom:1px solid #f0f0f0; text-align:center;\">" +
+                "      <img src=\"https://res.cloudinary.com/dzidt15cl/image/upload/v1757179436/shopping_1_o7hhyi.png\" alt=\"SHOPPING\" style=\"width:60px; height:auto; margin-bottom:20px;\"/>" +
+                "      <h1 style=\"margin:0 0 8px; font-size:24px; font-weight:600; color:#212529; letter-spacing:-0.25px;\">Cảnh báo vi phạm</h1>" +
+                "      <p style=\"margin:0; font-size:15px; color:#6c757d;\">Seller #" + safe(e.getSellerId()) + "</p>" +
+                "    </div>" +
+
+                "    <div class=\"content\" style=\"padding:32px;\">" +
+                "      <div style=\"margin-bottom:24px;\">" +
+                "        <h2 style=\"color:#212529; margin:0 0 8px; font-size:18px; font-weight:500;\">Kính gửi " + safe(e.getSellerEmail()) + ",</h2>" +
+                "        <p style=\"color:#6c757d; font-size:15px; margin:0;\">Chúng tôi ghi nhận vi phạm liên quan đến <strong>" + safe(e.getViolationType()) + "</strong>.</p>" +
+                "      </div>" +
+
+                "      <div style=\"background-color:#fffbeb; border-left:3px solid #f59e0b; padding:16px 20px; border-radius:6px; margin:24px 0;\">" +
+                "        <div style=\"display:flex; align-items:center; gap:8px; color:#b45309; font-weight:600;\">" +
+                "          <span>⚠️</span><span>Chi tiết cảnh báo</span>" +
+                "        </div>" +
+                "        <div style=\"margin-top:12px; color:#92400e; font-size:14px;\">" +
+                "          <div><strong>Số lần vi phạm:</strong> " + (e.getViolationCount() == null ? "N/A" : e.getViolationCount()) + "</div>" +
+                "          " + (e.getWarningMessage() != null && !e.getWarningMessage().isBlank()
+                ? "<div style='margin-top:6px;'><strong>Thông điệp:</strong> " + safe(e.getWarningMessage()) + "</div>"
+                : "") +
+                "        </div>" +
+                "      </div>" +
+
+                "      <div style=\"background-color:#f8f9fa; border-radius:6px; padding:20px; margin:24px 0;\">" +
+                "        <h4 style=\"color:#212529; font-size:14px; font-weight:500; margin:0 0 8px;\">Khuyến nghị xử lý</h4>" +
+                "        <ul style=\"color:#6b7280; margin:0; padding-left:20px; line-height:1.6; font-size:14px;\">" +
+                "          <li>Rà soát lại sản phẩm/tin đăng liên quan và chỉnh sửa theo chính sách</li>" +
+                "          <li>Tránh tái diễn vi phạm để không bị tạm khóa tài khoản</li>" +
+                "          <li>Giữ liên hệ với bộ phận hỗ trợ nếu cần hướng dẫn</li>" +
+                "        </ul>" +
+                "      </div>" +
+
+                "      <div style=\"text-align:center; margin:32px 0;\">" +
+                "        <a href=\"http://localhost:3000/seller/violations\" style=\"display:inline-block; background-color:#212529; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:500; font-size:14px;\">Xem chi tiết vi phạm</a>" +
+                "      </div>" +
+
+                "      <div style=\"text-align:center; padding:20px; background-color:#f8f9fa; border-radius:6px; margin:24px 0;\">" +
+                "        <h4 style=\"margin:0 0 8px; font-size:14px; font-weight:500; color:#212529;\">Cần hỗ trợ?</h4>" +
+                "        <p style=\"margin:0 0 12px; color:#6c757d; font-size:13px;\">Liên hệ email hỗ trợ</p>" +
+                "        <a href=\"mailto:thinh183tt@gmail.com\" style=\"color:#212529; text-decoration:none; font-weight:500; font-size:14px;\">thinh183tt@gmail.com</a>" +
+                "      </div>" +
+                "    </div>" +
+
+                "    <div style=\"background-color:#f8f9fa; padding:24px 32px; text-align:center; border-top:1px solid #e9ecef;\">" +
+                "      <div style=\"margin-bottom:16px;\">" +
+                "        <a href=\"#\" style=\"margin:0 8px; opacity:.6;\"><img src=\"https://cdn-icons-png.flaticon.com/512/733/733547.png\" width=\"20\"/></a>" +
+                "        <a href=\"#\" style=\"margin:0 8px; opacity:.6;\"><img src=\"https://cdn-icons-png.flaticon.com/512/2111/2111463.png\" width=\"20\"/></a>" +
+                "        <a href=\"#\" style=\"margin:0 8px; opacity:.6;\"><img src=\"https://cdn-icons-png.flaticon.com/512/1384/1384060.png\" width=\"20\"/></a>" +
+                "      </div>" +
+                "      <div style=\"font-size:12px; color:#6c757d; margin-bottom:8px;\">" +
+                "        <a href=\"#\" style=\"margin:0 8px; color:#6c757d; text-decoration:none;\">Chính sách</a>" +
+                "        <a href=\"#\" style=\"margin:0 8px; color:#6c757d; text-decoration:none;\">Hỗ trợ</a>" +
+                "        <a href=\"#\" style=\"margin:0 8px; color:#6c757d; text-decoration:none;\">Điều khoản</a>" +
+                "      </div>" +
+                "      <p style=\"margin:0; font-size:11px; color:#adb5bd;\">© 2025 SHOPPING. Tất cả quyền được bảo lưu.</p>" +
+                "    </div>" +
+                "  </div>" +
+                "</body></html>";
+    }
+
+    /** Gửi email enforce tối giản: không tiết lộ nội dung chính sách. */
+    public void sendEmailPolicyEnforcementMinimal(List<String> emails) {
+        LocalDateTime start = LocalDateTime.now();
+        LocalDateTime deadline = start.plusDays(30);
+
+        for (String recipient : emails) {
+            String html = templatePolicyEnforcementMinimal(start, deadline);
+            EmailRequest req = EmailRequest.builder()
+                    .sender(Sender.builder().name("SHOPPING").email(email).build())
+                    .to(List.of(Recipient.builder().email(recipient).build()))
+                    .subject("Thông báo xác nhận chính sách trong 30 ngày")
+                    .htmlContent(html)
+                    .build();
+            try {
+                emailClient.sendEmail(apiKey, req);
+            } catch (FeignException e) {
+                throw new RuntimeException("Failed to send minimal policy enforcement email: " + e.contentUTF8());
+            }
+        }
+    }
+
+    /** Template tối giản: chỉ nói phải chấp nhận trong 30 ngày, không nêu chi tiết chính sách. */
+    private String templatePolicyEnforcementMinimal(LocalDateTime startDate, LocalDateTime deadlineDate) {
+        String effective = fmtDateTime(startDate);
+        String deadline  = fmtDateTime(deadlineDate);
+
+        return "<html lang='vi'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                + "<title>Thông báo xác nhận chính sách</title>"
+                + "<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');*{box-sizing:border-box}body{margin:0;padding:0}</style>"
+                + "</head><body style=\"font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f8f9fa;margin:0;padding:20px;line-height:1.6;\">"
+
+                + "<div style='max-width:600px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.05)'>"
+                + "  <div style='padding:36px 28px 22px;border-bottom:1px solid #f0f0f0;text-align:center'>"
+                + "    <img src='https://res.cloudinary.com/dzidt15cl/image/upload/v1757179436/shopping_1_o7hhyi.png' alt='SHOPPING' style='width:56px;height:auto;margin-bottom:16px'/>"
+                + "    <h1 style='margin:0 0 6px;font-size:20px;font-weight:700;color:#111827'>Thông báo xác nhận chính sách</h1>"
+                + "    <p style='margin:0;color:#6b7280;font-size:13px'>Áp dụng từ " + effective + "</p>"
+                + "  </div>"
+
+                + "  <div style='padding:24px 28px'>"
+                + "    <p style='margin:0 0 12px;color:#374151'>Kính gửi Quý Người bán,</p>"
+                + "    <p style='margin:0 0 12px;color:#374151'>Để tiếp tục hoạt động bình thường, vui lòng <strong>chấp nhận</strong> các điều khoản cập nhật trên Bảng điều khiển Người bán.</p>"
+
+                + "    <div style='background:#fff7ed;border-left:3px solid #f59e0b;padding:14px 16px;border-radius:8px;margin:16px 0'>"
+                + "      <div style='color:#b45309;font-weight:700;font-size:14px;margin-bottom:6px'>Thời hạn xác nhận</div>"
+                + "      <div style='color:#92400e;font-size:14px'>Trước: <strong>" + deadline + "</strong></div>"
+                + "      <p style='margin:8px 0 0;color:#92400e;font-size:13px'>Sau thời hạn trên, nếu không có phản hồi, hợp tác sẽ <strong>tự động chấm dứt</strong>.</p>"
+                + "    </div>"
+
+                + "    <div style='background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin:18px 0'>"
+                + "      <div style='color:#111827;font-weight:700;margin-bottom:6px'>Lưu ý</div>"
+                + "      <ul style='margin:0;padding-left:18px;color:#374151;font-size:14px;line-height:1.7'>"
+                + "        <li>Một số quyền trong Seller Center có thể <strong>bị hạn chế tạm thời</strong> cho đến khi bạn chấp nhận.</li>"
+                + "        <li>Chấp nhận xong, quyền sẽ được <strong>khôi phục đầy đủ</strong>.</li>"
+                + "      </ul>"
+                + "    </div>"
+
+                + "    <div style='background:#fef2f2;border-left:3px solid #ef4444;padding:14px 16px;border-radius:8px;margin:16px 0'>"
+                + "      <div style='color:#b91c1c;font-weight:700;margin-bottom:6px'>Muốn chấm dứt ngay?</div>"
+                + "      <p style='margin:0 0 8px;color:#991b1b;font-size:14px'>Vui lòng <strong>xử lý các đơn hàng đang mở</strong> và <strong>đối soát/rút số dư ví</strong> trước khi yêu cầu chấm dứt.</p>"
+                + "    </div>"
+
+                + "    <div style='text-align:center;padding:14px;background:#f3f4f6;border-radius:8px;margin:18px 0'>"
+                + "      <div style='font-weight:700;color:#111827;margin-bottom:6px'>Cần hỗ trợ?</div>"
+                + "      <a href='mailto:thinh183tt@gmail.com' style='color:#111827;text-decoration:none;font-weight:700;font-size:14px'>thinh183tt@gmail.com</a>"
+                + "    </div>"
+                + "  </div>"
+
+                + "  <div style='background:#f8f9fa;padding:20px 28px;text-align:center;border-top:1px solid #e5e7eb'>"
+                + "    <p style='margin:0;color:#9ca3af;font-size:12px'>© 2025 SHOPPING. Tất cả quyền được bảo lưu.</p>"
+                + "  </div>"
+                + "</div>"
+
+                + "</body></html>";
     }
 }
