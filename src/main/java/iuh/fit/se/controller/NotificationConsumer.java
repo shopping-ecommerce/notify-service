@@ -178,4 +178,97 @@ public class NotificationConsumer {
             log.error("Failed to send policy notification emails. Error: {}", e.getMessage());
         }
     }
+
+    @KafkaListener(topics = "seller-suspension", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.SellerSuspensionEvent"
+    })
+    public void handleSellerSuspension(SellerSuspensionEvent event) {
+        log.info("Received SellerSuspensionEvent: {}", event);
+        try {
+            // Tạo thông báo in-app
+            String contentText = String.format(
+                    "Tài khoản bán hàng của bạn đã bị tạm khóa %d ngày do vi phạm: %s. " +
+                            "Thời gian khóa đến: %s",
+                    event.getSuspensionDays(),
+                    event.getViolationType(),
+                    event.getSuspensionEndDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+            );
+
+            Map<String, Object> content = Map.of(
+                    "text", contentText,
+                    "sellerId", event.getSellerId(),
+                    "violationType", event.getViolationType(),
+                    "violationCount", event.getViolationCount(),
+                    "suspensionDays", event.getSuspensionDays(),
+                    "suspensionEndDate", event.getSuspensionEndDate().toString(),
+                    "link", "/seller/violations"
+            );
+
+
+            // Gửi email thông báo
+            emailService.sendEmailSellerSuspension(event);
+
+            log.info("Seller suspension notification sent successfully to seller: {} at email: {}",
+                    event.getSellerId(), event.getSellerEmail());
+        } catch (Exception e) {
+            log.error("Failed to send seller suspension notification for seller: {}. Error: {}",
+                    event.getSellerId(), e.getMessage());
+        }
+    }
+
+    @KafkaListener(topics = "seller-warning", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.SellerWarningEvent"
+    })
+    public void handleSellerWarning(SellerWarningEvent event) {
+        log.info("Received SellerWarningEvent: {}", event);
+        try {
+            // Tạo thông báo in-app
+            String contentText = String.format(
+                    "Cảnh báo: Bạn đã vi phạm quy định về %s. Đây là vi phạm lần %d. %s",
+                    event.getViolationType(),
+                    event.getViolationCount(),
+                    event.getWarningMessage()
+            );
+
+            Map<String, Object> content = Map.of(
+                    "text", contentText,
+                    "sellerId", event.getSellerId(),
+                    "violationType", event.getViolationType(),
+                    "violationCount", event.getViolationCount(),
+                    "warningMessage", event.getWarningMessage(),
+                    "link", "/seller/violations"
+            );
+
+            // Gửi email cảnh báo
+            emailService.sendEmailSellerWarning(event);
+
+            log.info("Seller warning notification sent successfully to seller: {} at email: {}",
+                    event.getSellerId(), event.getSellerEmail());
+        } catch (Exception e) {
+            log.error("Failed to send seller warning notification for seller: {}. Error: {}",
+                    event.getSellerId(), e.getMessage());
+        }
+    }
+
+    @KafkaListener(topics = "policy-enforce-topic", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.PolicyEnforceEvent"
+    })
+    public void handlePolicyEnforce(iuh.fit.event.dto.PolicyEnforceEvent event) {
+        log.info("Received PolicyEnforceEvent: {}", event);
+        try {
+            if (event.getEmails() != null && !event.getEmails().isEmpty()) {
+                emailService.sendEmailPolicyEnforcementMinimal(event.getEmails());
+                for (String em : event.getEmails()) {
+                    log.info("Minimal policy enforcement email sent to: {}", em);
+                }
+            } else {
+                log.warn("PolicyEnforceEvent has empty emails list.");
+            }
+        } catch (Exception e) {
+            log.error("Failed to process PolicyEnforceEvent. Error: {}", e.getMessage());
+        }
+    }
 }
