@@ -271,4 +271,39 @@ public class NotificationConsumer {
             log.error("Failed to process PolicyEnforceEvent. Error: {}", e.getMessage());
         }
     }
+    @KafkaListener(topics = "seller-unsuspension", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.SellerUnsuspensionEvent"
+    })
+    public void handleSellerUnsuspension(iuh.fit.event.dto.SellerUnsuspensionEvent event) {
+        log.info("Received SellerUnsuspensionEvent: {}", event);
+        try {
+            // In-app notification
+            String contentText = String.format(
+                    "Tài khoản bán hàng của bạn đã được khôi phục lúc %s.",
+                    event.getUnsuspendedAt() != null
+                            ? event.getUnsuspendedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                            : "N/A"
+            );
+
+            Map<String, Object> content = Map.of(
+                    "text", contentText,
+                    "sellerId", event.getSellerId(),
+                    "link", "/seller/dashboard"
+            );
+
+            // Có thể dùng type SUCCESS/NOTIFY tùy enum của bạn
+            notificationService.createNotification(event.getSellerId(), NotificationType.NOTIFY, content);
+
+            // Email
+            emailService.sendEmailSellerUnsuspension(event);
+
+            log.info("Seller unsuspension notification sent to seller: {} at email: {}",
+                    event.getSellerId(), event.getSellerEmail());
+        } catch (Exception e) {
+            log.error("Failed to process SellerUnsuspensionEvent for seller: {}. Error: {}",
+                    event.getSellerId(), e.getMessage());
+        }
+    }
+
 }
