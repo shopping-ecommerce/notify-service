@@ -59,7 +59,13 @@ public class NotificationConsumer {
                 "link", "/user/orders/" + orderEvent.getOrderId()
         );
         notificationService.createNotification(orderEvent.getUserId(), NotificationType.NOTIFY, content);
-
+        String contentTextSeller = String.format("Bạn có một đơn hàng mới #%s vừa được tạo.", orderEvent.getOrderId());
+        Map<String, Object> contentOfSeller = Map.of(
+                "text", contentTextSeller,
+                "orderId", orderEvent.getOrderId(),
+                "link", "/seller/orders"
+        );
+        notificationService.createNotification(orderEvent.getSellerId(), NotificationType.NOTIFY, contentOfSeller);
         log.info("Received OrderCreatedEvent: {}", orderEvent);
             // Gửi email thông báo đơn hàng
             emailService.sendEmailOrderSuccess(orderEvent);
@@ -83,7 +89,15 @@ public class NotificationConsumer {
                     "link", "/account/orders/" + orderEvent.getOrderId()
             );
             notificationService.createNotification(orderEvent.getUserId(), NotificationType.NOTIFY, content);
-
+            if( orderEvent.getStatus().equals("DELIVERED")) {
+                String contentTextSeller = String.format("Đơn hàng #%s của bạn đã được giao thành công với số tiền: .", orderEvent.getOrderId());
+                Map<String, Object> contentOfSeller = Map.of(
+                        "text", contentTextSeller,
+                        "orderId", orderEvent.getOrderId(),
+                        "link", "/seller/orders"
+                );
+                notificationService.createNotification(orderEvent.getSellerId(), NotificationType.NOTIFY, contentOfSeller);
+            }
             // Gửi email thông báo cập nhật trạng thái đơn hàng
             emailService.sendEmailOrderStatusUpdate(orderEvent);
             log.info("Order status update email sent successfully for order: {} to email: {}",
@@ -110,6 +124,13 @@ public class NotificationConsumer {
             );
             notificationService.createNotification(orderEvent.getUserId(), NotificationType.NOTIFY, content);
 
+            String contentTextSeller = String.format("Bạn có một đơn hàng mới #%s vừa bị hủy.", orderEvent.getOrderId());
+            Map<String, Object> contentOfSeller = Map.of(
+                    "text", contentTextSeller,
+                    "orderId", orderEvent.getOrderId(),
+                    "link", "/seller/orders"
+            );
+            notificationService.createNotification(orderEvent.getSellerId(), NotificationType.NOTIFY, contentOfSeller);
             // Send email notification to the seller for cancellation
             emailService.sendEmailOrderCancelStatus(orderEvent);
             log.info("Order cancellation email sent successfully for order: {} to email: {}",
@@ -198,13 +219,9 @@ public class NotificationConsumer {
             Map<String, Object> content = Map.of(
                     "text", contentText,
                     "sellerId", event.getSellerId(),
-                    "violationType", event.getViolationType(),
-                    "violationCount", event.getViolationCount(),
-                    "suspensionDays", event.getSuspensionDays(),
-                    "suspensionEndDate", event.getSuspensionEndDate().toString(),
                     "link", "/seller/violations"
             );
-
+            notificationService.createNotification(event.getSellerId(), NotificationType.NOTIFY, content);
 
             // Gửi email thông báo
             emailService.sendEmailSellerSuspension(event);
@@ -235,12 +252,9 @@ public class NotificationConsumer {
             Map<String, Object> content = Map.of(
                     "text", contentText,
                     "sellerId", event.getSellerId(),
-                    "violationType", event.getViolationType(),
-                    "violationCount", event.getViolationCount(),
-                    "warningMessage", event.getWarningMessage(),
                     "link", "/seller/violations"
             );
-
+            notificationService.createNotification(event.getSellerId(), NotificationType.NOTIFY, content);
             // Gửi email cảnh báo
             emailService.sendEmailSellerWarning(event);
 
