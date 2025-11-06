@@ -1564,4 +1564,60 @@ public class EmailServiceImpl {
 
                 + "</body></html>";
     }
+    public EmailReponse sendEmailSellerUnsuspension(iuh.fit.event.dto.SellerUnsuspensionEvent e) {
+        String html = templateSellerUnsuspension(e);
+        EmailRequest emailRequest = EmailRequest.builder()
+                .sender(Sender.builder().name("SHOPPING").email(email).build())
+                .to(List.of(Recipient.builder().email(e.getSellerEmail()).build()))
+                .subject("Tài khoản bán hàng đã được khôi phục")
+                .htmlContent(html)
+                .build();
+        try {
+            return emailClient.sendEmail(apiKey, emailRequest);
+        } catch (FeignException ex) {
+            throw new RuntimeException("Failed to send seller unsuspension email: " + ex.contentUTF8());
+        }
+    }
+
+    private String templateSellerUnsuspension(iuh.fit.event.dto.SellerUnsuspensionEvent e) {
+        String at = e.getUnsuspendedAt() != null
+                ? e.getUnsuspendedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                : "N/A";
+
+        return "<html lang='vi'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'>"
+                + "<title>Khôi phục tài khoản bán hàng</title>"
+                + "<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');*{box-sizing:border-box}body{margin:0;padding:0}</style>"
+                + "</head><body style=\"font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f8f9fa;margin:0;padding:20px;line-height:1.6;\">"
+                + "<div style='max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.05)'>"
+                + "  <div style='padding:40px 32px 30px;border-bottom:1px solid #f0f0f0;text-align:center'>"
+                + "    <img src='https://res.cloudinary.com/dzidt15cl/image/upload/v1757179436/shopping_1_o7hhyi.png' alt='SHOPPING' style='width:60px;height:auto;margin-bottom:18px'/>"
+                + "    <h1 style='margin:0 0 8px;font-size:24px;font-weight:600;color:#111827'>Tài khoản đã được khôi phục</h1>"
+                + "    <p style='margin:0;color:#6b7280;font-size:14px'>Seller #" + (e.getSellerId()==null?"N/A":e.getSellerId()) + " • " + at + "</p>"
+                + "  </div>"
+                + "  <div style='padding:28px 32px'>"
+                + "    <p style='margin:0 0 12px;color:#374151'>Kính gửi " + (e.getSellerEmail()==null?"quý người bán":e.getSellerEmail()) + ",</p>"
+                + "    <p style='margin:0 0 12px;color:#374151'>Tài khoản bán hàng của bạn đã được <strong>khôi phục</strong>. Các tính năng và quyền đăng bán đã mở lại.</p>"
+                + "    <div style='background:#ecfdf5;border:1px solid #a7f3d0;padding:16px;border-radius:8px;margin:16px 0'>"
+                + "      <div style='color:#065f46;font-weight:600;margin-bottom:6px'>Gợi ý sau khi khôi phục</div>"
+                + "      <ul style='margin:0;padding-left:18px;color:#065f46;font-size:14px;line-height:1.7'>"
+                + "        <li>Rà soát lại danh sách sản phẩm và trạng thái tồn kho.</li>"
+                + "        <li>Đọc kỹ Chính sách đăng bán để tránh tái vi phạm.</li>"
+                + "        <li>Theo dõi mục Vi phạm trong Seller Center nếu còn cảnh báo mở.</li>"
+                + "      </ul>"
+                + "    </div>"
+                + "    <div style='text-align:center;margin:24px 0'>"
+                + "      <a href='http://localhost:3000/seller/dashboard' style='display:inline-block;background:#111827;color:#fff;padding:12px 20px;text-decoration:none;border-radius:8px;font-weight:600'>Vào Seller Center</a>"
+                + "    </div>"
+                + "    <div style='text-align:center;padding:16px;background:#f3f4f6;border-radius:8px;margin:18px 0'>"
+                + "      <div style='font-weight:600;color:#111827;margin-bottom:6px'>Cần hỗ trợ?</div>"
+                + "      <a href='mailto:thinh183tt@gmail.com' style='color:#111827;text-decoration:none;font-weight:600'>thinh183tt@gmail.com</a>"
+                + "    </div>"
+                + "  </div>"
+                + "  <div style='background:#f8f9fa;padding:20px 28px;text-align:center;border-top:1px solid #e5e7eb'>"
+                + "    <p style='margin:0;color:#9ca3af;font-size:12px'>© 2025 SHOPPING. Tất cả quyền được bảo lưu.</p>"
+                + "  </div>"
+                + "</div>"
+                + "</body></html>";
+    }
+
 }
