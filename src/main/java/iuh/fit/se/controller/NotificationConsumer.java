@@ -305,5 +305,4 @@ public class NotificationConsumer {
                     event.getSellerId(), e.getMessage());
         }
     }
-
 }
