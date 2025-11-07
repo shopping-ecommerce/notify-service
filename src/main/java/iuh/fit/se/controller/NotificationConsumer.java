@@ -63,7 +63,7 @@ public class NotificationConsumer {
         Map<String, Object> contentOfSeller = Map.of(
                 "text", contentTextSeller,
                 "orderId", orderEvent.getOrderId(),
-                "link", "/seller/orders"
+                "link", "/seller/orders/"+ orderEvent.getOrderId()
         );
         notificationService.createNotification(orderEvent.getSellerId(), NotificationType.NOTIFY, contentOfSeller);
         log.info("Received OrderCreatedEvent: {}", orderEvent);
@@ -94,7 +94,7 @@ public class NotificationConsumer {
                 Map<String, Object> contentOfSeller = Map.of(
                         "text", contentTextSeller,
                         "orderId", orderEvent.getOrderId(),
-                        "link", "/seller/orders"
+                        "link", "/seller/orders/"+orderEvent.getOrderId()
                 );
                 notificationService.createNotification(orderEvent.getSellerId(), NotificationType.NOTIFY, contentOfSeller);
             }
@@ -128,7 +128,7 @@ public class NotificationConsumer {
             Map<String, Object> contentOfSeller = Map.of(
                     "text", contentTextSeller,
                     "orderId", orderEvent.getOrderId(),
-                    "link", "/seller/orders"
+                    "link", "/seller/orders"+ orderEvent.getOrderId()
             );
             notificationService.createNotification(orderEvent.getSellerId(), NotificationType.NOTIFY, contentOfSeller);
             // Send email notification to the seller for cancellation
@@ -153,7 +153,7 @@ public class NotificationConsumer {
                     "text", contentText,
                     "sellerId", event.getSellerId(),
                     "status", event.getStatus(),
-                    "link", "/seller/profile"
+                    "link", "/seller/home"
             );
             notificationService.createNotification(event.getSellerId(), NotificationType.NOTIFY, content);
 
@@ -303,7 +303,7 @@ public class NotificationConsumer {
             Map<String, Object> content = Map.of(
                     "text", contentText,
                     "sellerId", event.getSellerId(),
-                    "link", "/seller/dashboard"
+                    "link", "/seller/home"
             );
 
             // Có thể dùng type SUCCESS/NOTIFY tùy enum của bạn
