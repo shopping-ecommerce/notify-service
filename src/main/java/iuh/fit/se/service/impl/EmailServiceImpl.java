@@ -1619,5 +1619,181 @@ public class EmailServiceImpl {
                 + "</div>"
                 + "</body></html>";
     }
+    public EmailReponse sendEmailAppealDecision(AppealDecisionEvent event) {
+        String htmlContent = templateAppealDecision(event);
+        EmailRequest emailRequest = EmailRequest.builder()
+                .sender(Sender.builder().name("SHOPPING").email(email).build())
+                .to(List.of(Recipient.builder().email(event.getSellerEmail()).build()))
+                .subject("Kết quả xét duyệt khiếu nại #" + event.getAppealId())
+                .htmlContent(htmlContent)
+                .build();
+        try {
+            return emailClient.sendEmail(apiKey, emailRequest);
+        } catch (FeignException e) {
+            throw new RuntimeException("Failed to send appeal decision email: " + e.contentUTF8());
+        }
+    }
 
+    private String templateAppealDecision(AppealDecisionEvent event) {
+        boolean isApproved = "APPROVED".equalsIgnoreCase(event.getStatus());
+        String statusText = isApproved ? "Được chấp nhận" : "Bị từ chối";
+        String statusColor = isApproved ? "#22c55e" : "#ef4444";
+        String statusIcon = isApproved ? "✅" : "❌";
+        String statusMessage = isApproved
+                ? "Khiếu nại của bạn đã được xem xét và <strong>chấp nhận</strong>. Vi phạm liên quan đã được xóa khỏi hồ sơ của bạn."
+                : "Sau khi xem xét kỹ lưỡng, chúng tôi quyết định <strong>không chấp nhận</strong> khiếu nại của bạn. Vi phạm ban đầu vẫn được giữ nguyên.";
+
+        String reviewedAt = event.getReviewedAt() != null
+                ? event.getReviewedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                : "N/A";
+
+        // Admin response section
+        String adminResponseHtml = "";
+        if (event.getAdminResponse() != null && !event.getAdminResponse().trim().isEmpty()) {
+            adminResponseHtml =
+                    "      <div style=\"background-color: " + (isApproved ? "#f0fdf4" : "#fef2f2") + "; " +
+                            "border-left: 3px solid " + statusColor + "; padding: 16px 20px; border-radius: 6px; margin: 24px 0;\">" +
+                            "        <h4 style=\"color: " + (isApproved ? "#15803d" : "#dc2626") + "; " +
+                            "font-size: 14px; font-weight: 500; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;\">Phản hồi từ quản trị viên</h4>" +
+                            "        <p style=\"color: " + (isApproved ? "#166534" : "#991b1b") + "; " +
+                            "margin: 0; line-height: 1.5; font-size: 14px;\">" + safe(event.getAdminResponse()) + "</p>" +
+                            "      </div>";
+        }
+
+        // Next steps section - different for approved vs rejected
+        String nextStepsHtml;
+        if (isApproved) {
+            nextStepsHtml =
+                    "      <div style=\"background-color: #f0fdf4; border: 1px solid #86efac; padding: 20px; border-radius: 6px; margin: 24px 0;\">" +
+                            "        <h4 style=\"color: #15803d; font-size: 14px; font-weight: 500; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 0.5px;\">Các bước tiếp theo</h4>" +
+                            "        <ul style=\"color: #166534; margin: 0; padding-left: 20px; line-height: 1.6; font-size: 14px;\">" +
+                            "          <li style=\"margin-bottom: 8px;\">Vi phạm đã được xóa khỏi hồ sơ của bạn</li>" +
+                            "          <li style=\"margin-bottom: 8px;\">Tài khoản đã được khôi phục đầy đủ quyền (nếu trước đó bị hạn chế)</li>" +
+                            "          <li style=\"margin-bottom: 8px;\">Tiếp tục hoạt động bán hàng bình thường</li>" +
+                            "          <li>Tuân thủ chính sách để tránh vi phạm trong tương lai</li>" +
+                            "        </ul>" +
+                            "      </div>";
+        } else {
+            nextStepsHtml =
+                    "      <div style=\"background-color: #fef2f2; border: 1px solid #fecaca; padding: 20px; border-radius: 6px; margin: 24px 0;\">" +
+                            "        <h4 style=\"color: #dc2626; font-size: 14px; font-weight: 500; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 0.5px;\">Lưu ý quan trọng</h4>" +
+                            "        <ul style=\"color: #991b1b; margin: 0; padding-left: 20px; line-height: 1.6; font-size: 14px;\">" +
+                            "          <li style=\"margin-bottom: 8px;\">Vi phạm ban đầu vẫn được giữ nguyên trong hồ sơ</li>" +
+                            "          <li style=\"margin-bottom: 8px;\">Các biện pháp xử lý (nếu có) vẫn tiếp tục có hiệu lực</li>" +
+                            "          <li style=\"margin-bottom: 8px;\">Đọc kỹ phản hồi của quản trị viên để hiểu rõ lý do</li>" +
+                            "          <li>Tuân thủ chính sách nghiêm ngặt để tránh vi phạm thêm</li>" +
+                            "        </ul>" +
+                            "      </div>";
+        }
+
+        return "<html lang=\"vi\">" +
+                "<head>" +
+                "  <meta charset=\"UTF-8\">" +
+                "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
+                "  <title>Kết quả xét duyệt khiếu nại #" + event.getAppealId() + "</title>" +
+                "  <style>" +
+                "    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');" +
+                "    * { box-sizing: border-box; }" +
+                "    body { margin: 0; padding: 0; }" +
+                "    @media only screen and (max-width: 600px) {" +
+                "      .container { width: 100% !important; margin: 10px !important; }" +
+                "      .content { padding: 20px !important; }" +
+                "      .header { padding: 30px 20px !important; }" +
+                "    }" +
+                "  </style>" +
+                "</head>" +
+                "<body style=\"font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; line-height: 1.6;\">" +
+                "  <div class=\"container\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);\">" +
+
+                "    <!-- Header -->" +
+                "    <div class=\"header\" style=\"background-color: #ffffff; padding: 40px 32px 30px; border-bottom: 1px solid #f0f0f0;\">" +
+                "      <div style=\"text-align: center;\">" +
+                "        <img src=\"https://res.cloudinary.com/dzidt15cl/image/upload/v1757179436/shopping_1_o7hhyi.png\" alt=\"SHOPPING\" style=\"width: 60px; height: auto; margin-bottom: 20px;\"/>" +
+                "        <h1 style=\"margin: 0 0 8px; font-size: 24px; font-weight: 600; color: #212529; letter-spacing: -0.25px;\">Kết quả xét duyệt khiếu nại</h1>" +
+                "        <p style=\"margin: 0; font-size: 15px; color: #6c757d;\">Khiếu nại #" + event.getAppealId() + "</p>" +
+                "      </div>" +
+                "    </div>" +
+
+                "    <!-- Content -->" +
+                "    <div class=\"content\" style=\"padding: 32px;\">" +
+
+                "      <!-- Greeting -->" +
+                "      <div style=\"margin-bottom: 32px;\">" +
+                "        <h2 style=\"color: #212529; margin: 0 0 8px; font-size: 18px; font-weight: 500;\">Kính gửi " + safe(event.getSellerEmail()) + ",</h2>" +
+                "        <p style=\"color: #6c757d; font-size: 15px; margin: 0; line-height: 1.5;\">" + statusMessage + "</p>" +
+                "      </div>" +
+
+                "      <!-- Status Badge -->" +
+                "      <div style=\"background-color: " + statusColor + "; padding: 16px 20px; border-radius: 6px; margin: 24px 0;\">" +
+                "        <div style=\"display: flex; align-items: center;\">" +
+                "          <span style=\"margin-right: 8px; font-size: 16px;\">" + statusIcon + "</span>" +
+                "          <span style=\"color: #ffffff; font-weight: 500; font-size: 14px;\">" + statusText + "</span>" +
+                "        </div>" +
+                "      </div>" +
+
+                "      <!-- Appeal Info -->" +
+                "      <div style=\"border: 1px solid #e9ecef; border-radius: 6px; padding: 20px; margin: 24px 0; background-color: #f8f9fa;\">" +
+                "        <h3 style=\"color: #212529; font-size: 16px; font-weight: 500; margin: 0 0 12px;\">Thông tin khiếu nại</h3>" +
+                "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Mã khiếu nại:</span>" +
+                "          <span style=\"color: #212529; font-weight: 500; font-size: 14px;\">#" + event.getAppealId() + "</span>" +
+                "        </div>" +
+                "        <div style=\"display: flex; justify-content: space-between; margin-bottom: 8px;\">" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Seller ID:</span>" +
+                "          <span style=\"color: #212529; font-weight: 500; font-size: 14px;\">" + safe(event.getSellerId()) + "</span>" +
+                "        </div>" +
+                "        <div style=\"display: flex; justify-content: space-between;\">" +
+                "          <span style=\"color: #6c757d; font-size: 14px;\">Thời gian xét duyệt:</span>" +
+                "          <span style=\"color: #212529; font-weight: 500; font-size: 14px;\">" + reviewedAt + "</span>" +
+                "        </div>" +
+                "      </div>" +
+
+                adminResponseHtml +
+
+                nextStepsHtml +
+
+                "      <!-- Action Button -->" +
+                "      <div style=\"text-align: center; margin: 40px 0 32px;\">" +
+                "        <a href=\"http://localhost:3000/seller/appeals/" + event.getAppealId() + "\" " +
+                "           style=\"display: inline-block; background-color: #212529; color: #ffffff; " +
+                "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
+                "           font-size: 14px; transition: background-color 0.2s ease;\">" +
+                "          Xem chi tiết khiếu nại" +
+                "        </a>" +
+                "      </div>" +
+
+                "      <!-- Support -->" +
+                "      <div style=\"text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 6px; margin: 24px 0;\">" +
+                "        <h4 style=\"margin: 0 0 8px; font-size: 14px; font-weight: 500; color: #212529;\">Cần hỗ trợ?</h4>" +
+                "        <p style=\"margin: 0 0 12px; color: #6c757d; font-size: 13px;\">Liên hệ với chúng tôi qua email</p>" +
+                "        <a href=\"mailto:thinh183tt@gmail.com\" style=\"color: #212529; text-decoration: none; font-weight: 500; font-size: 14px;\">thinh183tt@gmail.com</a>" +
+                "      </div>" +
+                "    </div>" +
+
+                "    <!-- Footer -->" +
+                "    <div style=\"background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e9ecef;\">" +
+                "      <div style=\"margin-bottom: 16px;\">" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/733/733547.png\" width=\"20\" alt=\"Facebook\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/2111/2111463.png\" width=\"20\" alt=\"Instagram\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; opacity: 0.6; transition: opacity 0.2s ease;\">" +
+                "          <img src=\"https://cdn-icons-png.flaticon.com/512/1384/1384060.png\" width=\"20\" alt=\"YouTube\" style=\"vertical-align: middle;\">" +
+                "        </a>" +
+                "      </div>" +
+                "      <div style=\"font-size: 12px; color: #6c757d; margin-bottom: 8px;\">" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Chính sách</a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Hỗ trợ</a>" +
+                "        <a href=\"#\" style=\"margin: 0 8px; color: #6c757d; text-decoration: none;\">Điều khoản</a>" +
+                "      </div>" +
+                "      <p style=\"margin: 0; font-size: 11px; color: #adb5bd;\">" +
+                "        © 2025 SHOPPING. Tất cả quyền được bảo lưu." +
+                "      </p>" +
+                "    </div>" +
+                "  </div>" +
+                "</body>" +
+                "</html>";
+    }
 }
