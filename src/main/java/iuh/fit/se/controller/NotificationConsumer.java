@@ -319,4 +319,37 @@ public class NotificationConsumer {
                     event.getSellerId(), e.getMessage());
         }
     }
+
+    @KafkaListener(topics = "appeal-decision", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.AppealDecisionEvent"
+    })
+    public void handleAppealDecision(AppealDecisionEvent event) {
+        log.info("Received AppealDecisionEvent: {}", event);
+        try {
+            // Tạo thông báo in-app
+            String contentText = String.format(
+                    "Khiếu nại #%s của bạn đã được xét duyệt: %s",
+                    event.getAppealId(),
+                    "APPROVED".equalsIgnoreCase(event.getStatus()) ? "Được chấp nhận" : "Bị từ chối"
+            );
+
+            Map<String, Object> content = Map.of(
+                    "text", contentText,
+                    "appealId", event.getAppealId(),
+                    "status", event.getStatus(),
+                    "link", "/seller/appeals/" + event.getAppealId()
+            );
+            notificationService.createNotification(event.getSellerId(), NotificationType.NOTIFY, content);
+
+            // Gửi email thông báo
+            emailService.sendEmailAppealDecision(event);
+
+            log.info("Appeal decision notification sent successfully for appeal: {} to seller: {} at email: {}",
+                    event.getAppealId(), event.getSellerId(), event.getSellerEmail());
+        } catch (Exception e) {
+            log.error("Failed to send appeal decision notification for appeal: {}. Error: {}",
+                    event.getAppealId(), e.getMessage());
+        }
+    }
 }
