@@ -261,7 +261,7 @@ public class EmailServiceImpl {
 
                 "      <!-- Action Button -->" +
                 "      <div style=\"text-align: center; margin: 40px 0 32px;\">" +
-                "        <a href=\"http://localhost:3000/seller/products/" + notify.getProductId() + "\" " +
+                "        <a href=\"http://localhost:5173/seller/products-suspended" + "\" " +
                 "           style=\"display: inline-block; background-color: #212529; color: #ffffff; " +
                 "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
                 "           font-size: 14px; transition: background-color 0.2s ease;\">" +
@@ -365,7 +365,7 @@ public class EmailServiceImpl {
                 "      <!-- Action Button -->" +
                 (event.getStatus().equalsIgnoreCase("APPROVED") ?
                         "      <div style=\"text-align: center; margin: 40px 0 32px;\">" +
-                                "        <a href=\"http://localhost:3000/seller/dashboard\" " +
+                                "        <a href=\"http://localhost:5173/seller/business-efficiency\" " +
                                 "           style=\"display: inline-block; background-color: #212529; color: #ffffff; " +
                                 "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
                                 "           font-size: 14px; transition: background-color 0.2s ease;\">" +
@@ -752,7 +752,7 @@ public class EmailServiceImpl {
                 (!("CANCELLED".equalsIgnoreCase(order.getStatus())) ?
                         "      <!-- Action Button -->" +
                                 "      <div style=\"text-align: center; margin: 40px 0 32px;\">" +
-                                "        <a href=\"http://localhost:3000/orders/" + order.getOrderId() + "\" " +
+                                "        <a href=\"http://localhost:5173/account/orders/" + order.getOrderId() + "\" " +
                                 "           style=\"display: inline-block; background-color: #212529; color: #ffffff; " +
                                 "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
                                 "           font-size: 14px; transition: background-color 0.2s ease;\">" +
@@ -898,7 +898,6 @@ public class EmailServiceImpl {
                 "    </div>" +
                 "    <p style=\"text-align: center;\">Mã có hiệu lực trong <strong>1 phút</strong>.</p>" +
                 "    <p style=\"text-align: center;\">" +
-                "       <a href=\"" + verifyUrl + "\" style=\"background-color: #3498db; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px;\">Xác thực ngay</a>" +
                 "    <p style=\"text-align: center; margin-top: 30px; font-size: 14px;\">Nếu bạn không yêu cầu mã này, vui lòng liên hệ <a href=\"mailto:thinh183tt@gmail.com\">support@shopping.com</a>.</p>" +
 
                 // Footer giống Riot
@@ -940,7 +939,7 @@ public class EmailServiceImpl {
                 "    <p style=\"text-align: center;\">Tài khoản của bạn với email <strong>" + name + "</strong> đã được tạo thành công.</p>" +
                 "    <p style=\"text-align: center;\">Bây giờ bạn có thể đăng nhập và bắt đầu trải nghiệm các dịch vụ tuyệt vời của SHOPPING!</p>" +
                 "    <p style=\"text-align: center; margin: 20px 0;\">" +
-                "      <a href=\"http://localhost:3000/\" style=\"background-color: #3498db; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px;\">Đăng nhập ngay</a>" +
+                "      <a href=\"http://localhost:5173/login\" style=\"background-color: #3498db; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px;\">Đăng nhập ngay</a>" +
                 "    </p>" +
                 "    <p style=\"text-align: center; margin-top: 30px; font-size: 14px;\">Nếu bạn gặp bất kỳ vấn đề nào, vui lòng liên hệ <a href=\"mailto:thinh183tt@gmail.com\">support@shopping.com</a>.</p>" +
                 // Footer giống Riot
@@ -1087,7 +1086,7 @@ public class EmailServiceImpl {
                 "      </div>" +
                 "      <!-- Action Button -->" +
                 "      <div style=\"text-align: center; margin: 40px 0 32px;\">" +
-                "        <a href=\"http://localhost:3000/orders/" + order.getOrderId() + "\" " +
+                "        <a href=\"http://localhost:5173/account/orders/" + order.getOrderId() + "\" " +
                 "           style=\"display: inline-block; background-color: #212529; color: #ffffff; " +
                 "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
                 "           font-size: 14px; transition: background-color 0.2s ease;\">" +
@@ -1238,7 +1237,7 @@ public class EmailServiceImpl {
                                 "           font-size: 14px; margin: 0 8px 12px; transition: background-color 0.2s ease;\">" +
                                 "          📄 Tải file PDF" +
                                 "        </a>" : "") +
-                "        <a href=\"http://localhost:3000/policies\" " +
+                "        <a href=\"http://localhost:5173/seller/policy\" " +
                 "           style=\"display: inline-block; background-color: #212529; color: #ffffff; " +
                 "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
                 "           font-size: 14px; margin: 0 8px 12px; transition: background-color 0.2s ease;\">" +
@@ -1387,7 +1386,7 @@ public class EmailServiceImpl {
                 "      </div>" +
 
                 "      <div style=\"text-align:center; margin:32px 0;\">" +
-                "        <a href=\"http://localhost:3000/seller/violations\" style=\"display:inline-block; background-color:#212529; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:500; font-size:14px;\">Xem chi tiết vi phạm</a>" +
+                "        <a href=\"http://localhost:5173/seller/violations\" style=\"display:inline-block; background-color:#212529; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:500; font-size:14px;\">Xem chi tiết vi phạm</a>" +
                 "      </div>" +
 
                 "      <div style=\"text-align:center; padding:20px; background-color:#f8f9fa; border-radius:6px; margin:24px 0;\">" +
@@ -1463,7 +1462,7 @@ public class EmailServiceImpl {
                 "      </div>" +
 
                 "      <div style=\"text-align:center; margin:32px 0;\">" +
-                "        <a href=\"http://localhost:3000/seller/violations\" style=\"display:inline-block; background-color:#212529; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:500; font-size:14px;\">Xem chi tiết vi phạm</a>" +
+                "        <a href=\"http://localhost:5173/seller/violations\" style=\"display:inline-block; background-color:#212529; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:500; font-size:14px;\">Xem chi tiết vi phạm</a>" +
                 "      </div>" +
 
                 "      <div style=\"text-align:center; padding:20px; background-color:#f8f9fa; border-radius:6px; margin:24px 0;\">" +
@@ -1606,7 +1605,7 @@ public class EmailServiceImpl {
                 + "      </ul>"
                 + "    </div>"
                 + "    <div style='text-align:center;margin:24px 0'>"
-                + "      <a href='http://localhost:3000/seller/dashboard' style='display:inline-block;background:#111827;color:#fff;padding:12px 20px;text-decoration:none;border-radius:8px;font-weight:600'>Vào Seller Center</a>"
+                + "      <a href='http://localhost:5173/seller/business-efficiency' style='display:inline-block;background:#111827;color:#fff;padding:12px 20px;text-decoration:none;border-radius:8px;font-weight:600'>Vào Seller Center</a>"
                 + "    </div>"
                 + "    <div style='text-align:center;padding:16px;background:#f3f4f6;border-radius:8px;margin:18px 0'>"
                 + "      <div style='font-weight:600;color:#111827;margin-bottom:6px'>Cần hỗ trợ?</div>"
@@ -1754,7 +1753,7 @@ public class EmailServiceImpl {
 
                 "      <!-- Action Button -->" +
                 "      <div style=\"text-align: center; margin: 40px 0 32px;\">" +
-                "        <a href=\"http://localhost:3000/seller/appeals/" + event.getAppealId() + "\" " +
+                "        <a href=\"http://localhost:5173/seller/appeals-history" + event.getAppealId() + "\" " +
                 "           style=\"display: inline-block; background-color: #212529; color: #ffffff; " +
                 "           padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; " +
                 "           font-size: 14px; transition: background-color 0.2s ease;\">" +
