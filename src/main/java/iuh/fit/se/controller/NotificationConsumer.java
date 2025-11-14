@@ -128,7 +128,7 @@ public class NotificationConsumer {
             Map<String, Object> contentOfSeller = Map.of(
                     "text", contentTextSeller,
                     "orderId", orderEvent.getOrderId(),
-                    "link", "/seller/orders"+ orderEvent.getOrderId()
+                    "link", "/seller/orders/"+ orderEvent.getOrderId()
             );
             notificationService.createNotification(orderEvent.getSellerId(), NotificationType.NOTIFY, contentOfSeller);
             // Send email notification to the seller for cancellation

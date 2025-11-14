@@ -41,7 +41,7 @@ public class NotificationServiceImpl implements NotificationService {
      */
     @Override
     public Page<Notification> getNotificationsByUserId(String userId, Pageable pageable) {
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        return notificationRepository.findByUserId(userId, pageable);
     }
 
     /**
