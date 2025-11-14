@@ -38,4 +38,6 @@ public interface NotificationRepository extends MongoRepository<Notification, St
      * @return Số lượng thông báo
      */
     long countByUserIdAndStatus(String userId, NotificationStatus status);
+
+    Page<Notification> findByUserId(String userId, Pageable pageable);
 }
