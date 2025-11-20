@@ -352,4 +352,33 @@ public class NotificationConsumer {
                     event.getAppealId(), e.getMessage());
         }
     }
+
+    @KafkaListener(topics = "user-banned", properties = {
+            "spring.json.use.type.headers=false",
+            "spring.json.value.default.type=iuh.fit.event.dto.UserBanned"
+    })
+    public void handleUserBanned(UserBanned userBanned) {
+        log.info("Received UserBanned event: {}", userBanned);
+        try {
+            // Tạo thông báo in-app
+            String contentText = String.format(
+                    "Tài khoản của bạn đã bị tạm khóa tính năng đặt hàng. Lý do: %s",
+                    userBanned.getReason()
+            );
+
+            Map<String, Object> content = Map.of(
+                    "text", contentText,
+                    "userId", userBanned.getUserId(),
+                    "link", "/account"
+            );
+            notificationService.createNotification(userBanned.getUserId(), NotificationType.NOTIFY, content);
+
+            // Gửi email thông báo
+            log.info("User banned notification sent successfully for user: {} to email: {}",
+                    userBanned.getUserId());
+        } catch (Exception e) {
+            log.error("Failed to send user banned notification for user: {}. Error: {}",
+                    userBanned.getUserId(), e.getMessage());
+        }
+    }
 }
