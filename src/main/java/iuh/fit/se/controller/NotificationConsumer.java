@@ -59,13 +59,13 @@ public class NotificationConsumer {
 //                "link", "/user/orders/" + orderEvent.getOrderId()
 //        );
 //        notificationService.createNotification(orderEvent.getUserId(), NotificationType.NOTIFY, content);
-//        String contentTextSeller = String.format("Bạn có một đơn hàng mới #%s vừa được tạo.", orderEvent.getOrderId());
-//        Map<String, Object> contentOfSeller = Map.of(
-//                "text", contentTextSeller,
-//                "orderId", orderEvent.getOrderId(),
-//                "link", "/seller/orders/"+ orderEvent.getOrderId()
-//        );
-//        notificationService.createNotification(orderEvent.getSellerId(), NotificationType.NOTIFY, contentOfSeller);
+        String contentTextSeller = String.format("Bạn có một đơn hàng mới #%s vừa được tạo.", orderEvent.getOrderId());
+        Map<String, Object> contentOfSeller = Map.of(
+                "text", contentTextSeller,
+                "orderId", orderEvent.getOrderId(),
+                "link", "/seller/orders/"+ orderEvent.getOrderId()
+        );
+        notificationService.createNotification(orderEvent.getSellerId(), NotificationType.NOTIFY, contentOfSeller);
         log.info("Received OrderCreatedEvent: {}", orderEvent);
             // Gửi email thông báo đơn hàng
             emailService.sendEmailOrderSuccess(orderEvent);
